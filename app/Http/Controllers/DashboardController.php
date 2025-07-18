@@ -35,7 +35,7 @@ class DashboardController extends Controller
                 ->get(),
             'quick_actions' => [
                 'register_membership' => route('memberships.quick-register'),
-                'renew_membership' => route('memberships.quick-renew'),
+                /* 'renew_membership' => route('memberships.quick-renew'), */
                 'new_client' => route('clients.create'),
                 'new_plan' => route('plans.create'),
             ]
