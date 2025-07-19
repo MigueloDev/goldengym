@@ -60,7 +60,8 @@ export default function CreatePlan() {
         <AppLayout breadcrumbs={plansBreadcrumbs.create()}>
             <Head title="Nuevo Plan" />
 
-            <div className="space-y-6">
+            <div className="flex h-full flex-1 flex-col gap-6 p-6">
+              <div className="space-y-6">
                 {/* Header */}
                 <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-4">
@@ -174,7 +175,7 @@ export default function CreatePlan() {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="price">Precio en VES *</Label>
+                                    <Label htmlFor="price">Precio en USD (Si paga en Bolivares) *</Label>
                                     <div className="relative">
                                         <CreditCard className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                                         <Input
@@ -282,6 +283,7 @@ export default function CreatePlan() {
                     </div>
                 </form>
             </div>
+          </div>
         </AppLayout>
     );
 }

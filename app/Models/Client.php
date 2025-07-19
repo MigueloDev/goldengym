@@ -20,6 +20,8 @@ class Client extends Model
         'notes',
     ];
 
+    protected $appends = ['profile_photo_url'];
+
     protected $casts = [
         'birth_date' => 'date',
     ];
@@ -121,5 +123,22 @@ class Client extends Model
             'expired' => 'danger',
             default => 'secondary'
         };
+    }
+
+    public function getProfilePhotoUrlAttribute()
+    {
+        return $this->getProfilePhotoUrl();
+    }
+
+    // Método para obtener la URL de la foto de perfil
+    public function getProfilePhotoUrl()
+    {
+        return $this->profilePhoto ? $this->profilePhoto->getUrl() : null;
+    }
+
+    // Método para verificar si tiene foto de perfil
+    public function hasProfilePhoto()
+    {
+        return $this->profilePhoto()->exists();
     }
 }

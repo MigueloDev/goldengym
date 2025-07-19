@@ -33,6 +33,12 @@ class Payment extends Model
         return $this->morphOne(File::class, 'fileable');
     }
 
+    // Evidencias de pago (múltiples archivos)
+    public function paymentEvidences()
+    {
+        return $this->morphMany(File::class, 'fileable')->where('type', 'payment_evidence');
+    }
+
     // Relaciones
     public function membership()
     {
@@ -72,5 +78,29 @@ class Payment extends Model
     public function scopeByCurrency($query, $currency)
     {
         return $query->where('currency', $currency);
+    }
+
+    // Métodos auxiliares para evidencias de pago
+    public function hasPaymentEvidences()
+    {
+        return $this->paymentEvidences()->exists();
+    }
+
+    public function getPaymentEvidencesCount()
+    {
+        return $this->paymentEvidences()->count();
+    }
+
+    public function addPaymentEvidence($file)
+    {
+        $path = $file->store('payments/evidences', 'public');
+
+        return $this->paymentEvidences()->create([
+            'name' => $file->getClientOriginalName(),
+            'path' => $path,
+            'mime_type' => $file->getMimeType(),
+            'size' => $file->getSize(),
+            'type' => 'payment_evidence',
+        ]);
     }
 }

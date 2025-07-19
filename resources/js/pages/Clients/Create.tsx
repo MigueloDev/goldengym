@@ -45,7 +45,8 @@ export default function CreateClient({ pathologies }: Props) {
         gender: '',
         status: 'active',
         notes: '',
-        profile_photo: '',
+        profile_photo_url: '',
+        profile_photo: null as File | null,
         pathologies: [] as Array<{
             id: number;
             notes: string;
@@ -131,7 +132,7 @@ export default function CreateClient({ pathologies }: Props) {
                             <div className="flex items-center space-x-4">
                                 <div className="relative">
                                     <Avatar className="h-20 w-20">
-                                        <AvatarImage src={data.profile_photo} alt="Foto de perfil" />
+                                        <AvatarImage src={data.profile_photo_url} alt="Foto de perfil" />
                                         <AvatarFallback className="text-lg">
                                             {data.name ? data.name.split(' ').map(n => n[0]).join('').toUpperCase() : 'U'}
                                         </AvatarFallback>
@@ -161,7 +162,8 @@ export default function CreateClient({ pathologies }: Props) {
                                             if (file) {
                                                 const reader = new FileReader();
                                                 reader.onload = (e) => {
-                                                    setData('profile_photo', e.target?.result as string);
+                                                    setData('profile_photo_url', e.target?.result as string);
+                                                    setData('profile_photo', file as File);
                                                 };
                                                 reader.readAsDataURL(file);
                                             }

@@ -42,11 +42,31 @@ interface Props {
   plans: Plan[];
 }
 
+const formatDateForInput = (dateString: string | null) => {
+  if (!dateString) return '';
+
+  // Si la fecha ya está en formato YYYY-MM-DD, la devolvemos tal como está
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+    return dateString;
+  }
+
+  // Si es una fecha en otro formato, intentamos convertirla
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return '';
+
+    return date.toISOString().split('T')[0];
+  } catch {
+    return '';
+  }
+};
+
+
 export default function MembershipEdit({ membership, plans }: Props) {
   const { data, setData, put, processing, errors } = useForm({
     plan_id: membership.plan.id.toString(),
-    start_date: membership.start_date,
-    end_date: membership.end_date,
+    start_date: formatDateForInput(membership.start_date),
+    end_date: formatDateForInput(membership.end_date),
     status: membership.status,
     notes: membership.notes || '',
   });
@@ -173,7 +193,7 @@ export default function MembershipEdit({ membership, plans }: Props) {
                 <div>
                   <Label className="text-sm font-medium">Monto Pagado</Label>
                   <p className="text-lg font-semibold">
-                    {membership.currency === 'usd' ? '$' : '₡'}{membership.amount_paid.toLocaleString()}
+                    {membership.currency === 'usd' ? '$' : 'Bs'}{membership.amount_paid.toLocaleString()}
                   </p>
                 </div>
                 <div>

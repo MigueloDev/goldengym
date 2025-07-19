@@ -114,7 +114,7 @@ export default function PaymentsIndex({ payments, filters, stats }: Props) {
     };
 
     const formatCurrency = (amount: number, currency: 'local' | 'usd') => {
-        const symbol = currency === 'usd' ? '$' : '₡';
+        const symbol = currency === 'usd' ? '$' : 'Bs';
         return `${symbol}${amount.toLocaleString()}`;
     };
 

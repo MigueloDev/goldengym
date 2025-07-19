@@ -14,7 +14,7 @@ class PaymentController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Payment::with(['membership.client', 'membership.plan', 'registeredBy', 'paymentMethods']);
+        $query = Payment::with(['membership.client', 'membership.plan', 'registeredBy', 'paymentMethods', 'paymentEvidences']);
 
         // Filtros
         if ($request->filled('search')) {
@@ -105,6 +105,8 @@ class PaymentController extends Controller
         return Inertia::render('Payments/Create', [
             'membership' => $membership,
             'membershipsWithDebt' => $membershipsWithDebt,
+            'maxFileSize' => 5120, // 5MB en KB
+            'allowedFileTypes' => ['jpeg', 'png', 'jpg', 'gif', 'pdf'],
         ]);
     }
 
@@ -122,6 +124,7 @@ class PaymentController extends Controller
             'payment_date' => 'required|date',
             'payment_methods_json' => 'required|json',
             'notes' => 'nullable|string|max:1000',
+            'payment_evidences.*' => 'nullable|file|mimes:jpeg,png,jpg,gif,pdf|max:5120', // 5MB max
         ]);
 
         $paymentMethods = json_decode($validated['payment_methods_json'], true);
@@ -153,6 +156,13 @@ class PaymentController extends Controller
                 'reference' => $method['reference'] ?? null,
                 'notes' => $method['notes'] ?? null,
             ]);
+        }
+
+        // Manejar evidencias de pago si se proporcionaron
+        if ($request->hasFile('payment_evidences')) {
+            foreach ($request->file('payment_evidences') as $evidence) {
+                $payment->addPaymentEvidence($evidence);
+            }
         }
 
                 // Obtener la membresía
@@ -194,7 +204,7 @@ class PaymentController extends Controller
      */
     public function show(Payment $payment)
     {
-        $payment->load(['membership.client', 'membership.plan', 'registeredBy']);
+        $payment->load(['membership.client', 'membership.plan', 'registeredBy', 'paymentEvidences']);
 
         return Inertia::render('Payments/Show', [
             'payment' => $payment,
@@ -206,7 +216,7 @@ class PaymentController extends Controller
      */
     public function edit(Payment $payment)
     {
-        $payment->load(['membership.client', 'membership.plan']);
+        $payment->load(['membership.client', 'membership.plan', 'paymentEvidences']);
 
         return Inertia::render('Payments/Edit', [
             'payment' => $payment,
@@ -225,9 +235,17 @@ class PaymentController extends Controller
             'payment_method' => 'required|in:cash,card,transfer,other',
             'reference' => 'nullable|string|max:255',
             'notes' => 'nullable|string|max:1000',
+            'payment_evidences.*' => 'nullable|file|mimes:jpeg,png,jpg,gif,pdf|max:5120',
         ]);
 
         $payment->update($validated);
+
+        // Manejar nuevas evidencias de pago si se proporcionaron
+        if ($request->hasFile('payment_evidences')) {
+            foreach ($request->file('payment_evidences') as $evidence) {
+                $payment->addPaymentEvidence($evidence);
+            }
+        }
 
         return redirect()->route('payments.index')
             ->with('success', 'Pago actualizado exitosamente.');
@@ -242,5 +260,32 @@ class PaymentController extends Controller
 
         return redirect()->route('payments.index')
             ->with('success', 'Pago eliminado exitosamente.');
+    }
+
+    /**
+     * Remove a payment evidence file.
+     */
+    public function removePaymentEvidence(Payment $payment, $evidenceId)
+    {
+        $evidence = $payment->paymentEvidences()->findOrFail($evidenceId);
+        $evidence->delete();
+
+        return response()->json(['message' => 'Evidencia de pago eliminada exitosamente.']);
+    }
+
+    /**
+     * Add payment evidences to an existing payment.
+     */
+    public function addPaymentEvidences(Request $request, Payment $payment)
+    {
+        $request->validate([
+            'payment_evidences.*' => 'required|file|mimes:jpeg,png,jpg,gif,pdf|max:5120',
+        ]);
+
+        foreach ($request->file('payment_evidences') as $evidence) {
+            $payment->addPaymentEvidence($evidence);
+        }
+
+        return response()->json(['message' => 'Evidencias de pago agregadas exitosamente.']);
     }
 }

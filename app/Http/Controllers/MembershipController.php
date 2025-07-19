@@ -12,6 +12,7 @@ use Inertia\Inertia;
 
 class MembershipController extends Controller
 {
+
     /**
      * Display a listing of the resource.
      */
@@ -82,11 +83,25 @@ class MembershipController extends Controller
             'notes' => 'nullable|string|max:1000',
 
             // Datos del pago
-            'payment_amount' => 'required|numeric|min:0',
             'payment_currency' => 'required|in:local,usd',
-            'payment_method' => 'required|in:cash,card,transfer,other',
-            'payment_reference' => 'nullable|string|max:255',
+            'payment_methods_json' => 'required|json',
+            'payment_evidences.*' => 'nullable|file|mimes:jpeg,png,jpg,gif,pdf|max:5120', // 5MB max
         ]);
+
+        $paymentMethods = json_decode($validated['payment_methods_json'], true);
+
+        // Validar métodos de pago
+        $totalAmount = 0;
+        foreach ($paymentMethods as $method) {
+            if (!isset($method['method']) || !isset($method['amount']) || empty($method['amount'])) {
+                return back()->withErrors(['payment_methods' => 'Todos los métodos de pago deben tener un monto válido.']);
+            }
+            $totalAmount += floatval($method['amount']);
+        }
+
+        if ($totalAmount <= 0) {
+            return back()->withErrors(['payment_methods' => 'El monto total debe ser mayor a 0.']);
+        }
 
         // Crear o usar cliente existente
         if ($validated['client_id']) {
@@ -105,22 +120,39 @@ class MembershipController extends Controller
             'start_date' => $validated['start_date'],
             'end_date' => $plan->calculateEndDate($validated['start_date']),
             'status' => 'active',
-            'amount_paid' => $validated['payment_amount'],
+            'amount_paid' => $totalAmount,
             'currency' => $validated['payment_currency'],
             'registered_by' => auth()->id(),
             'notes' => $validated['notes'],
         ]);
 
-        // Crear pago
-        Payment::create([
+        // Crear pago principal
+        $payment = Payment::create([
             'membership_id' => $membership->id,
-            'amount' => $validated['payment_amount'],
+            'amount' => $totalAmount,
             'currency' => $validated['payment_currency'],
             'payment_date' => now(),
-            'payment_method' => $validated['payment_method'],
-            'reference' => $validated['payment_reference'],
+            'payment_method' => 'multiple', // Indicar que son múltiples métodos
+            'reference' => 'Registro rápido',
             'registered_by' => auth()->id(),
         ]);
+
+        // Crear los métodos de pago individuales
+        foreach ($paymentMethods as $method) {
+            $payment->paymentMethods()->create([
+                'method' => $method['method'],
+                'amount' => $method['amount'],
+                'reference' => $method['reference'] ?? null,
+                'notes' => $method['notes'] ?? null,
+            ]);
+        }
+
+        // Manejar evidencias de pago si se proporcionaron
+        if ($request->hasFile('payment_evidences')) {
+            foreach ($request->file('payment_evidences') as $evidence) {
+                $payment->addPaymentEvidence($evidence);
+            }
+        }
 
         return redirect()->route('memberships.index')
             ->with('success', 'Membresía registrada exitosamente.');
@@ -142,12 +174,26 @@ class MembershipController extends Controller
     {
         $validated = $request->validate([
             'plan_id' => 'required|exists:plans,id',
-            'payment_amount' => 'required|numeric|min:0',
             'payment_currency' => 'required|in:local,usd',
-            'payment_method' => 'required|in:cash,card,transfer,other',
-            'payment_reference' => 'nullable|string|max:255',
+            'payment_methods_json' => 'required|json',
             'notes' => 'nullable|string|max:1000',
+            'payment_evidences.*' => 'nullable|file|mimes:jpeg,png,jpg,gif,pdf|max:5120', // 5MB max
         ]);
+
+        $paymentMethods = json_decode($validated['payment_methods_json'], true);
+
+        // Validar métodos de pago
+        $totalAmount = 0;
+        foreach ($paymentMethods as $method) {
+            if (!isset($method['method']) || !isset($method['amount']) || empty($method['amount'])) {
+                return back()->withErrors(['payment_methods' => 'Todos los métodos de pago deben tener un monto válido.']);
+            }
+            $totalAmount += floatval($method['amount']);
+        }
+
+        if ($totalAmount <= 0) {
+            return back()->withErrors(['payment_methods' => 'El monto total debe ser mayor a 0.']);
+        }
 
         $plan = Plan::find($validated['plan_id']);
 
@@ -156,28 +202,45 @@ class MembershipController extends Controller
             'membership_id' => $membership->id,
             'previous_end_date' => $membership->end_date,
             'new_end_date' => $plan->calculateEndDate($membership->end_date),
-            'amount_paid' => $validated['payment_amount'],
+            'amount_paid' => $totalAmount,
             'currency' => $validated['payment_currency'],
             'processed_by' => auth()->id(),
         ]);
 
-        // Crear pago
+        // Crear pago principal
         $payment = Payment::create([
             'membership_id' => $membership->id,
-            'amount' => $validated['payment_amount'],
+            'amount' => $totalAmount,
             'currency' => $validated['payment_currency'],
             'payment_date' => now(),
-            'payment_method' => $validated['payment_method'],
-            'reference' => $validated['payment_reference'],
+            'payment_method' => 'multiple', // Indicar que son múltiples métodos
+            'reference' => 'Renovación rápida',
             'registered_by' => auth()->id(),
         ]);
+
+        // Crear los métodos de pago individuales
+        foreach ($paymentMethods as $method) {
+            $payment->paymentMethods()->create([
+                'method' => $method['method'],
+                'amount' => $method['amount'],
+                'reference' => $method['reference'] ?? null,
+                'notes' => $method['notes'] ?? null,
+            ]);
+        }
+
+        // Manejar evidencias de pago si se proporcionaron
+        if ($request->hasFile('payment_evidences')) {
+            foreach ($request->file('payment_evidences') as $evidence) {
+                $payment->addPaymentEvidence($evidence);
+            }
+        }
 
         // Actualizar membresía
         $membership->update([
             'plan_id' => $plan->id,
             'end_date' => $renewal->new_end_date,
             'status' => 'active',
-            'amount_paid' => $validated['payment_amount'],
+            'amount_paid' => $totalAmount,
             'currency' => $validated['payment_currency'],
             'notes' => $validated['notes'],
         ]);

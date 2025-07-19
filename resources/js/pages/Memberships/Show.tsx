@@ -6,6 +6,8 @@ import { Icon } from '@/components/icon';
 import Heading from '@/components/heading';
 import { ArrowLeft, Edit, RefreshCw, User, Calendar, CreditCard } from 'lucide-react';
 import { Label } from '@/components/ui/label';
+import { membershipsBreadcrumbs } from '@/lib/breadcrumbs';
+import AppLayout from '@/layouts/app-layout';
 
 interface Payment {
   id: number;
@@ -100,10 +102,10 @@ export default function MembershipShow({ membership }: Props) {
   };
 
   return (
-    <>
+    <AppLayout breadcrumbs={membershipsBreadcrumbs.show(membership.id, membership.client.name)}>
       <Head title={`Membresía - ${membership.client.name}`} />
-
-      <div className="space-y-6">
+      <div className="flex h-full flex-1 flex-col gap-6 p-6">
+        <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -340,7 +342,8 @@ export default function MembershipShow({ membership }: Props) {
             </Card>
           </div>
         </div>
+        </div>
       </div>
-    </>
+    </AppLayout>
   );
 }

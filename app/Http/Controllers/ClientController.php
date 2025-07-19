@@ -6,6 +6,7 @@ use App\Models\Client;
 use App\Models\Pathologies;
 use App\Models\DocumentTemplate;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
@@ -16,7 +17,7 @@ class ClientController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Client::with(['activeMembership', 'pathologies'])
+        $query = Client::with(['activeMembership', 'pathologies', 'profilePhoto'])
             ->withCount('memberships');
 
         // Filtros
@@ -114,9 +115,15 @@ class ClientController extends Controller
             'pathologies' => 'nullable|array',
             'pathologies.*.id' => 'required|exists:pathologies,id',
             'pathologies.*.notes' => 'nullable|string|max:500',
+            'profile_photo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
 
         $client = Client::create($validated);
+
+        // Manejar foto de perfil si se proporcionó
+        if ($request->hasFile('profile_photo')) {
+            $this->handleProfilePhoto($request, $client);
+        }
 
         // Asociar patologías si se proporcionaron
         if (isset($validated['pathologies'])) {
@@ -140,7 +147,8 @@ class ClientController extends Controller
             'activeMembership.plan',
             'memberships.plan',
             'pathologies',
-            'files'
+            'files',
+            'profilePhoto'
         ]);
 
         return Inertia::render('Clients/Show', [
@@ -153,7 +161,7 @@ class ClientController extends Controller
      */
     public function edit(Client $client)
     {
-        $client->load('pathologies');
+        $client->load(['pathologies', 'profilePhoto']);
         $pathologies = Pathologies::orderBy('name')->get();
 
         return Inertia::render('Clients/Edit', [
@@ -167,6 +175,7 @@ class ClientController extends Controller
      */
     public function update(Request $request, Client $client)
     {
+        try {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'nullable|email|max:255|unique:clients,email,' . $client->id,
@@ -179,9 +188,15 @@ class ClientController extends Controller
             'pathologies' => 'nullable|array',
             'pathologies.*.id' => 'required|exists:pathologies,id',
             'pathologies.*.notes' => 'nullable|string|max:500',
+            'profile_photo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
 
         $client->update($validated);
+
+        // Manejar foto de perfil si se proporcionó
+        if ($request->hasFile('profile_photo')) {
+            $this->handleProfilePhoto($request, $client);
+        }
 
         // Sincronizar patologías
         if (isset($validated['pathologies'])) {
@@ -198,6 +213,10 @@ class ClientController extends Controller
 
         return redirect()->route('clients.index')
             ->with('success', 'Cliente actualizado exitosamente.');
+        } catch (\Exception $e) {
+            dd($e);
+            Log::error('Error al actualizar el cliente: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -233,5 +252,50 @@ class ClientController extends Controller
 
         return redirect()->route('clients.index')
             ->with('success', 'Cliente eliminado permanentemente.');
+    }
+
+        /**
+     * Handle profile photo upload for a client.
+     */
+    private function handleProfilePhoto(Request $request, Client $client)
+    {
+        try {
+        // Eliminar foto de perfil anterior si existe
+        $existingPhoto = $client->profilePhoto;
+        if ($existingPhoto) {
+            $existingPhoto->delete();
+        }
+
+        // Subir nueva foto
+        $file = $request->file('profile_photo');
+        $path = $file->store('clients/profile-photos', 'public');
+
+        // Crear registro en la base de datos
+        $client->files()->create([
+            'name' => $file->getClientOriginalName(),
+            'path' => $path,
+            'mime_type' => $file->getMimeType(),
+            'size' => $file->getSize(),
+            'type' => 'profile_photo',
+            ]);
+        } catch (\Exception $e) {
+            dd($e);
+            Log::error('Error al manejar la foto de perfil: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Remove profile photo for a client.
+     */
+    public function removeProfilePhoto(Client $client)
+    {
+        $photo = $client->profilePhoto;
+
+        if ($photo) {
+            $photo->delete();
+            return response()->json(['message' => 'Foto de perfil eliminada exitosamente.']);
+        }
+
+        return response()->json(['message' => 'No se encontró foto de perfil.'], 404);
     }
 }

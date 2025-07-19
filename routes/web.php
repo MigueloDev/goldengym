@@ -22,8 +22,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Rutas para clientes
     Route::resource('clients', ClientController::class);
+    Route::post('clients/{client}', [ClientController::class, 'update'])->name('clients.update');
     Route::post('clients/{id}/restore', [ClientController::class, 'restore'])->name('clients.restore');
     Route::delete('clients/{id}/force-delete', [ClientController::class, 'forceDelete'])->name('clients.force-delete');
+    Route::delete('clients/{client}/profile-photo', [ClientController::class, 'removeProfilePhoto'])->name('clients.remove-profile-photo');
 
     // Rutas para patologías
     Route::resource('pathologies', PathologyController::class);
@@ -33,9 +35,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Rutas para pagos
     Route::resource('payments', PaymentController::class);
+    Route::post('payments/{payment}', [PaymentController::class, 'update'])->name('payments.update');
+    Route::delete('payments/{payment}/evidences/{evidence}', [PaymentController::class, 'removePaymentEvidence'])
+        ->name('payments.remove-evidence');
+    Route::post('payments/{payment}/evidences', [PaymentController::class, 'addPaymentEvidences'])
+        ->name('payments.add-evidences');
 
     // Rutas para membresías
-    Route::resource('memberships', MembershipController::class);
     Route::get('memberships/quick-register', [MembershipController::class, 'quickRegister'])
         ->name('memberships.quick-register');
     Route::post('memberships/quick-register', [MembershipController::class, 'storeQuickRegister'])
@@ -44,6 +50,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('memberships.quick-renew');
     Route::post('memberships/{membership}/quick-renew', [MembershipController::class, 'storeQuickRenew'])
         ->name('memberships.store-quick-renew');
+    Route::resource('memberships', MembershipController::class);
 
     // Rutas para plantillas de documentos
     Route::resource('document-templates', DocumentTemplateController::class);
