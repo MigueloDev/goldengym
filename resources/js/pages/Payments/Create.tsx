@@ -63,7 +63,7 @@ interface Props {
 }
 
 export default function CreatePayment({ membership, membershipsWithDebt }: Props) {
-  const { data, setData, post, processing, errors } = useForm({
+  const { data, setData, processing, errors } = useForm({
     membership_id: membership?.id?.toString() || '',
     currency: 'local',
     exchange_rate: '',
