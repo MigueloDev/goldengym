@@ -234,8 +234,8 @@ export default function PlansIndex({ plans, filters, stats }: Props) {
                 {/* Plans List */}
                 <div className="grid gap-4">
                     {plans.data.map((plan) => (
-                        <Card key={plan.id} className="hover:shadow-md transition-shadow">
-                            <CardContent className="p-6">
+                        <Card key={plan.id} className="hover:shadow-md transition-shadow py-2">
+                            <CardContent className="px-6 py-2">
                                 <div className="flex items-start justify-between">
                                     <div className="flex-1 space-y-3">
                                         <div className="flex items-center space-x-2">
