@@ -12,6 +12,7 @@ import { ArrowLeft, Plus, User, Calendar } from 'lucide-react';
 import AppLayout from '@/layouts/app-layout';
 import { membershipsBreadcrumbs } from '@/lib/breadcrumbs';
 import PaymentMethodsForm from '@/components/payment-methods-form';
+import { bodyToFetch } from '@/helpers';
 
 interface Plan {
   id: number;
@@ -60,38 +61,23 @@ export default function QuickRegister({ plans, clients }: Props) {
     notes: '',
     payment_currency: 'local',
     payment_methods_json: JSON.stringify([
-      { method: 'cash_usd' as const, amount: '', reference: '', notes: '' }
+      { method: 'cash_usd' as const, amount: '', type: 'usd', reference: '', notes: '' }
     ]),
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-
-    // Crear FormData para enviar archivos
-    const formData = new FormData();
-
-    // Agregar datos del formulario
-    Object.keys(data).forEach(key => {
-      const value = data[key as keyof typeof data];
-      if (typeof value === 'string') {
-        formData.append(key, value);
-      } else if (typeof value === 'object') {
-        formData.append(key, JSON.stringify(value));
-      }
-    });
-
-    // Agregar archivos de evidencia
-    paymentEvidences.forEach((file, index) => {
-      formData.append(`payment_evidences[${index}]`, file);
-    });
-
-    // Enviar con FormData usando router.post
+    const paymentMethods = JSON.parse(data.payment_methods_json);
+    const form = {
+      ...data,
+      payment_methods: paymentMethods,
+      payment_evidences: paymentEvidences,
+    }
+    const formData = bodyToFetch(form, true, true);
     router.post(route('memberships.store-quick-register'), formData);
   };
 
   const selectedPlan = plans.find(plan => plan.id.toString() === data.plan_id);
-
-  // Actualizar payment_methods_json cuando cambien los métodos
   React.useEffect(() => {
     setData('payment_methods_json', JSON.stringify(paymentMethods));
   }, [paymentMethods, setData]);

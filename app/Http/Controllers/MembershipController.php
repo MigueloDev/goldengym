@@ -9,6 +9,7 @@ use App\Models\Payment;
 use App\Models\MembershipRenewal;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Illuminate\Support\Facades\DB;
 
 class MembershipController extends Controller
 {
@@ -69,24 +70,30 @@ class MembershipController extends Controller
 
     public function storeQuickRegister(Request $request)
     {
-        $validated = $request->validate([
-            // Datos del cliente (si es nuevo)
-            'client_id' => 'nullable|exists:clients,id',
-            'new_client' => 'nullable|array',
-            'new_client.name' => 'required_without:client_id|string|max:255',
-            'new_client.email' => 'nullable|email|max:255',
-            'new_client.phone' => 'nullable|string|max:20',
-
-            // Datos de la membresía
+        DB::beginTransaction();
+        try {
+        // Validación condicional basada en si se está creando un nuevo cliente o usando uno existente
+        $validationRules = [
             'plan_id' => 'required|exists:plans,id',
             'start_date' => 'required|date',
             'notes' => 'nullable|string|max:1000',
-
-            // Datos del pago
             'payment_currency' => 'required|in:local,usd',
             'payment_methods_json' => 'required|json',
             'payment_evidences.*' => 'nullable|file|mimes:jpeg,png,jpg,gif,pdf|max:5120', // 5MB max
-        ]);
+        ];
+
+        // Si se proporciona client_id, validar que existe
+        if ($request->filled('client_id')) {
+            $validationRules['client_id'] = 'required|exists:clients,id';
+        } else {
+            // Si no hay client_id, validar los campos del nuevo cliente
+            $validationRules['new_client'] = 'required|array';
+            $validationRules['new_client.name'] = 'required|string|max:255';
+            $validationRules['new_client.email'] = 'nullable|email|max:255';
+            $validationRules['new_client.phone'] = 'nullable|string|max:20';
+        }
+
+        $validated = $request->validate($validationRules);
 
         $paymentMethods = json_decode($validated['payment_methods_json'], true);
 
@@ -110,6 +117,13 @@ class MembershipController extends Controller
             $client = Client::create($validated['new_client']);
         }
 
+        // Validar que el cliente no tenga una membresía activa
+        if (Membership::hasActiveMembership($client->id)) {
+            return back()->withErrors([
+                'client_id' => 'Este cliente ya tiene una membresía activa. No se puede registrar una nueva membresía mientras tenga una activa.'
+            ]);
+        }
+
         // Obtener plan
         $plan = Plan::find($validated['plan_id']);
 
@@ -126,32 +140,35 @@ class MembershipController extends Controller
             'notes' => $validated['notes'],
         ]);
 
-        // Crear pago principal
-        $payment = Payment::create([
-            'membership_id' => $membership->id,
-            'amount' => $totalAmount,
-            'currency' => $validated['payment_currency'],
-            'payment_date' => now(),
-            'payment_method' => 'multiple', // Indicar que son múltiples métodos
-            'reference' => 'Registro rápido',
-            'registered_by' => auth()->id(),
-        ]);
-
-        // Crear los métodos de pago individuales
+        // Crear múltiples pagos (uno por cada método)
+        $payments = [];
         foreach ($paymentMethods as $method) {
-            $payment->paymentMethods()->create([
-                'method' => $method['method'],
-                'amount' => $method['amount'],
-                'reference' => $method['reference'] ?? null,
+            $payment = Payment::create([
+                'membership_id' => $membership->id,
+                'amount' => floatval($method['amount']),
+                'currency' => $validated['payment_currency'],
+                'payment_date' => now(),
+                'payment_method' => $method['method'],
+                'reference' => $method['reference'] ?? 'Registro rápido',
                 'notes' => $method['notes'] ?? null,
+                'registered_by' => auth()->id(),
             ]);
+
+            $payments[] = $payment;
         }
 
-        // Manejar evidencias de pago si se proporcionaron
-        if ($request->hasFile('payment_evidences')) {
+        // Manejar evidencias de pago (asignar al primer pago)
+        if ($request->hasFile('payment_evidences') && !empty($payments)) {
             foreach ($request->file('payment_evidences') as $evidence) {
-                $payment->addPaymentEvidence($evidence);
+                $payments[0]->addPaymentEvidence($evidence);
             }
+        }
+
+        DB::commit();
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withErrors(['error' => 'Error al registrar la membresía: ' . $e->getMessage()]);
         }
 
         return redirect()->route('memberships.index')
@@ -170,8 +187,18 @@ class MembershipController extends Controller
         ]);
     }
 
-    public function storeQuickRenew(Request $request, Membership $membership)
+        public function storeQuickRenew(Request $request, Membership $membership)
     {
+        DB::beginTransaction();
+        try {
+
+        // Validar que la membresía no haya sido renovada recientemente (últimas 24 horas)
+        if (MembershipRenewal::hasRecentRenewal($membership->id)) {
+            return back()->withErrors([
+                'membership' => 'Esta membresía ya ha sido renovada recientemente. No se puede renovar nuevamente en las próximas 24 horas.'
+            ]);
+        }
+
         $validated = $request->validate([
             'plan_id' => 'required|exists:plans,id',
             'payment_currency' => 'required|in:local,usd',
@@ -207,31 +234,27 @@ class MembershipController extends Controller
             'processed_by' => auth()->id(),
         ]);
 
-        // Crear pago principal
-        $payment = Payment::create([
-            'membership_id' => $membership->id,
-            'amount' => $totalAmount,
-            'currency' => $validated['payment_currency'],
-            'payment_date' => now(),
-            'payment_method' => 'multiple', // Indicar que son múltiples métodos
-            'reference' => 'Renovación rápida',
-            'registered_by' => auth()->id(),
-        ]);
-
-        // Crear los métodos de pago individuales
+        // Crear múltiples pagos (uno por cada método)
+        $payments = [];
         foreach ($paymentMethods as $method) {
-            $payment->paymentMethods()->create([
-                'method' => $method['method'],
-                'amount' => $method['amount'],
-                'reference' => $method['reference'] ?? null,
+            $payment = Payment::create([
+                'membership_id' => $membership->id,
+                'amount' => floatval($method['amount']),
+                'currency' => $validated['payment_currency'],
+                'payment_date' => now(),
+                'payment_method' => $method['method'],
+                'reference' => $method['reference'] ?? 'Renovación rápida',
                 'notes' => $method['notes'] ?? null,
+                'registered_by' => auth()->id(),
             ]);
+
+            $payments[] = $payment;
         }
 
-        // Manejar evidencias de pago si se proporcionaron
-        if ($request->hasFile('payment_evidences')) {
+        // Manejar evidencias de pago (asignar al primer pago)
+        if ($request->hasFile('payment_evidences') && !empty($payments)) {
             foreach ($request->file('payment_evidences') as $evidence) {
-                $payment->addPaymentEvidence($evidence);
+                $payments[0]->addPaymentEvidence($evidence);
             }
         }
 
@@ -245,11 +268,18 @@ class MembershipController extends Controller
             'notes' => $validated['notes'],
         ]);
 
-        // Vincular pago con renovación
-        $renewal->update(['payment_id' => $payment->id]);
+        // Vincular pago con renovación (usar el primer pago como referencia)
+        $renewal->update(['payment_id' => $payments[0]->id]);
+
+        DB::commit();
 
         return redirect()->route('memberships.index')
             ->with('success', 'Membresía renovada exitosamente.');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withErrors(['error' => 'Error al renovar la membresía: ' . $e->getMessage()]);
+        }
     }
 
     // Métodos CRUD estándar

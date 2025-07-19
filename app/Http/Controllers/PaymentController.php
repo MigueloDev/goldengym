@@ -142,31 +142,35 @@ class PaymentController extends Controller
             return back()->withErrors(['payment_methods' => 'El monto total debe ser mayor a 0.']);
         }
 
-        $validated['registered_by'] = auth()->id();
-        $validated['amount'] = $totalAmount; // Guardar el total en el campo amount original
+        // Obtener la membresía
+        $membership = Membership::find($validated['membership_id']);
 
-        // Crear el pago principal
-        $payment = Payment::create($validated);
-
-        // Crear los métodos de pago individuales
+        // Crear múltiples pagos (uno por cada método)
+        $payments = [];
         foreach ($paymentMethods as $method) {
-            $payment->paymentMethods()->create([
-                'method' => $method['method'],
-                'amount' => $method['amount'],
+            $payment = Payment::create([
+                'membership_id' => $validated['membership_id'],
+                'amount' => floatval($method['amount']),
+                'currency' => $validated['currency'],
+                'exchange_rate' => $validated['exchange_rate'],
+                'selected_price' => $validated['selected_price'],
+                'selected_currency' => $validated['selected_currency'],
+                'payment_date' => $validated['payment_date'],
+                'payment_method' => $method['method'],
                 'reference' => $method['reference'] ?? null,
                 'notes' => $method['notes'] ?? null,
+                'registered_by' => auth()->id(),
             ]);
+
+            $payments[] = $payment;
         }
 
-        // Manejar evidencias de pago si se proporcionaron
-        if ($request->hasFile('payment_evidences')) {
+        // Manejar evidencias de pago (asignar al primer pago)
+        if ($request->hasFile('payment_evidences') && !empty($payments)) {
             foreach ($request->file('payment_evidences') as $evidence) {
-                $payment->addPaymentEvidence($evidence);
+                $payments[0]->addPaymentEvidence($evidence);
             }
         }
-
-                // Obtener la membresía
-        $membership = Membership::find($validated['membership_id']);
 
         // Calcular el monto adeudado basado en el precio seleccionado
         $selectedPrice = floatval($validated['selected_price']);
@@ -185,9 +189,9 @@ class PaymentController extends Controller
                 'status' => 'active', // Asegurar que esté activa
             ]);
 
-            // Crear registro de renovación
+            // Crear registro de renovación (usar el primer pago como referencia)
             $membership->renewals()->create([
-                'payment_id' => $payment->id,
+                'payment_id' => $payments[0]->id,
                 'renewal_date' => now(),
                 'previous_end_date' => $membership->getOriginal('end_date'),
                 'new_end_date' => $newEndDate,
@@ -196,7 +200,7 @@ class PaymentController extends Controller
         }
 
         return redirect()->route('payments.index')
-            ->with('success', 'Pago registrado exitosamente.');
+            ->with('success', 'Pagos registrados exitosamente.');
     }
 
     /**

@@ -60,10 +60,10 @@ const formatDate = (dateString: string) => {
 };
 
 const formatCurrency = (amount: number, currency: string) => {
-    if (currency === 'usd') {
-        return `$${amount.toFixed(2)}`;
-    }
-    return `Bs. ${amount.toFixed(2)}`;
+  if (currency === 'usd') {
+    return `$${amount?.toFixed(2)}`;
+  }
+  return `Bs. ${amount?.toFixed(2)}`;
 };
 
 export default function Dashboard({ stats, expiring_memberships, recent_payments, quick_actions }: DashboardProps) {
@@ -177,7 +177,7 @@ export default function Dashboard({ stats, expiring_memberships, recent_payments
                                             <div>
                                                 <h4 className="font-medium text-sm">{payment.membership.client.name}</h4>
                                                 <p className="text-xs text-muted-foreground">
-                                                    {formatCurrency(payment.amount, payment.currency)}
+                                                    {formatCurrency(parseFloat(payment.amount?.toString() ?? '0'), payment.currency)}
                                                 </p>
                                             </div>
                                             <span className="text-xs text-muted-foreground">

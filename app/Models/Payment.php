@@ -24,7 +24,7 @@ class Payment extends Model
     ];
 
     protected $casts = [
-        'amount' => 'decimal:2',
+        'amount' => 'float',
         'payment_date' => 'date',
     ];
 
@@ -53,11 +53,6 @@ class Payment extends Model
     public function renewal()
     {
         return $this->hasOne(MembershipRenewal::class);
-    }
-
-    public function paymentMethods()
-    {
-        return $this->hasMany(PaymentMethod::class);
     }
 
     // Scopes
@@ -102,5 +97,38 @@ class Payment extends Model
             'size' => $file->getSize(),
             'type' => 'payment_evidence',
         ]);
+    }
+
+    // Métodos auxiliares para payment methods
+    public function getMethodLabelAttribute()
+    {
+        $labels = [
+            'cash_usd' => 'Efectivo USD',
+            'cash_local' => 'Efectivo VES',
+            'card_usd' => 'Tarjeta USD',
+            'card_local' => 'Tarjeta VES',
+            'transfer_usd' => 'Transferencia USD',
+            'transfer_local' => 'Transferencia VES',
+            'crypto' => 'Crypto',
+            'other' => 'Otro',
+        ];
+
+        return $labels[$this->payment_method] ?? $this->payment_method;
+    }
+
+    public function getMethodColorAttribute()
+    {
+        $colors = [
+            'cash_usd' => 'bg-green-100 text-green-800',
+            'cash_local' => 'bg-green-100 text-green-800',
+            'card_usd' => 'bg-blue-100 text-blue-800',
+            'card_local' => 'bg-blue-100 text-blue-800',
+            'transfer_usd' => 'bg-purple-100 text-purple-800',
+            'transfer_local' => 'bg-purple-100 text-purple-800',
+            'crypto' => 'bg-purple-100 text-purple-800',
+            'other' => 'bg-gray-100 text-gray-800',
+        ];
+
+        return $colors[$this->payment_method] ?? 'bg-gray-100 text-gray-800';
     }
 }

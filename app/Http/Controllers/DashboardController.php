@@ -20,9 +20,9 @@ class DashboardController extends Controller
                 'total_clients' => Client::count(),
                 'active_memberships' => Membership::active()->count(),
                 'expiring_soon' => Membership::expiringSoon()->count(),
-                'monthly_revenue' => Payment::whereMonth('payment_date', now()->month)
+                'monthly_revenue' => floatval(Payment::whereMonth('payment_date', now()->month)
                     ->whereYear('payment_date', now()->year)
-                    ->sum('amount'),
+                    ->sum('amount')),
             ],
             'expiring_memberships' => Membership::with(['client', 'plan'])
                 ->expiringSoon()

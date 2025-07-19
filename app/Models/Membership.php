@@ -24,7 +24,7 @@ class Membership extends Model
     protected $casts = [
         'start_date' => 'date',
         'end_date' => 'date',
-        'amount_paid' => 'decimal:2',
+        'amount_paid' => 'float',
     ];
 
     // Relaciones
@@ -98,6 +98,22 @@ class Membership extends Model
     public function getDaysUntilExpiration()
     {
         return now()->diffInDays($this->end_date, false);
+    }
+
+    // Método estático para verificar si un cliente tiene membresía activa
+    public static function hasActiveMembership($clientId)
+    {
+        return static::where('client_id', $clientId)
+            ->where('status', 'active')
+            ->exists();
+    }
+
+    // Método estático para obtener la membresía activa de un cliente
+    public static function getActiveMembership($clientId)
+    {
+        return static::where('client_id', $clientId)
+            ->where('status', 'active')
+            ->first();
     }
 }
 

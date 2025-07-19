@@ -18,7 +18,7 @@ class PaymentMethod extends Model
     ];
 
     protected $casts = [
-        'amount' => 'decimal:2',
+        'amount' => 'float',
     ];
 
     // Relaciones

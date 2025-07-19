@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
@@ -20,8 +21,8 @@ class Plan extends Model
     ];
 
     protected $casts = [
-        'price' => 'decimal:2',
-        'price_usd' => 'decimal:2',
+        'price' => 'float',
+        'price_usd' => 'float',
         'features' => 'array',
     ];
 
@@ -52,7 +53,7 @@ class Plan extends Model
 
     public function calculateEndDate($startDate = null)
     {
-        $startDate = $startDate ?: now();
+        $startDate = $startDate ? Carbon::parse($startDate) : now();
         return $startDate->addDays($this->renewal_period_days);
     }
 }

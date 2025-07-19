@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import AppLayout from '@/layouts/app-layout';
 import { paymentsBreadcrumbs } from '@/lib/breadcrumbs';
+import { createFormDataWithFiles } from '@/helpers';
 
 interface Membership {
   id: number;
@@ -125,13 +126,10 @@ export default function CreatePayment({ membership, membershipsWithDebt }: Props
 
   const handleSubmit = (e: React.FormEvent) => {
       e.preventDefault();
-      const formData = new FormData();
-      Object.keys(data).forEach(key => {
-          formData.append(key, data[key as keyof typeof data]);
-      });
-      paymentEvidences.forEach((file, index) => {
-          formData.append(`payment_evidences[${index}]`, file);
-      });
+
+      // Usar la función helper para crear FormData
+      const formData = createFormDataWithFiles(data, paymentEvidences);
+
       router.post('/payments', formData);
   };
 

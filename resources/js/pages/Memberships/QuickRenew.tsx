@@ -13,6 +13,7 @@ import AppLayout from '@/layouts/app-layout';
 import PaymentMethodsForm from '@/components/payment-methods-form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { bodyToFetch } from '@/helpers';
 
 interface Plan {
   id: number;
@@ -71,26 +72,13 @@ export default function QuickRenew({ membership, plans }: Props) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-
-    // Crear FormData para enviar archivos
-    const formData = new FormData();
-
-    // Agregar datos del formulario
-    Object.keys(data).forEach(key => {
-      const value = data[key as keyof typeof data];
-      if (typeof value === 'string') {
-        formData.append(key, value);
-      } else if (typeof value === 'object') {
-        formData.append(key, JSON.stringify(value));
-      }
-    });
-
-    // Agregar archivos de evidencia
-    paymentEvidences.forEach((file, index) => {
-      formData.append(`payment_evidences[${index}]`, file);
-    });
-
-    // Enviar con FormData usando router.post
+    const paymentMethods = JSON.parse(data.payment_methods_json);
+    const form = {
+      ...data,
+      payment_methods: paymentMethods,
+      payment_evidences: paymentEvidences,
+    }
+    const formData = bodyToFetch(form, true, true);
     router.post(route('memberships.store-quick-renew', membership.id), formData);
   };
 

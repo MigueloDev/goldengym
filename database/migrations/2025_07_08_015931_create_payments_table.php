@@ -15,9 +15,10 @@ return new class extends Migration
             $table->id();
             $table->foreignId('membership_id')->constrained()->onDelete('cascade');
             $table->decimal('amount', 10, 2);
-            $table->enum('currency', ['local', 'usd'])->default('local');
+            $table->decimal('exchange_rate', 16, 2)->nullable();
             $table->date('payment_date');
-            $table->enum('payment_method', ['cash', 'card', 'transfer', 'other'])->default('cash');
+            $table->enum('payment_method', ['cash_usd', 'cash_local', 'card_usd', 'card_local', 'transfer_usd', 'transfer_local', 'crypto','other']);
+            $table->enum('currency', ['local', 'usd'])->default('local');
             $table->string('reference')->nullable(); // Referencia de transferencia, etc.
             $table->foreignId('registered_by')->constrained('users');
             $table->text('notes')->nullable();

@@ -22,7 +22,7 @@ class MembershipRenewal extends Model
     protected $casts = [
         'previous_end_date' => 'date',
         'new_end_date' => 'date',
-        'amount_paid' => 'decimal:2',
+        'amount_paid' => 'float',
     ];
 
     // Relaciones
@@ -49,5 +49,19 @@ class MembershipRenewal extends Model
 
         return $query->whereMonth('created_at', $month)
                     ->whereYear('created_at', $year);
+    }
+
+    public static function hasRecentRenewal($membershipId, $hours = 24)
+    {
+        return static::where('membership_id', $membershipId)
+            ->where('created_at', '>=', now()->subHours($hours))
+            ->exists();
+    }
+
+    public static function getRecentRenewal($membershipId, $hours = 24)
+    {
+        return static::where('membership_id', $membershipId)
+            ->where('created_at', '>=', now()->subHours($hours))
+            ->first();
     }
 }
