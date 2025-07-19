@@ -19,6 +19,8 @@ import {
     Users,
     Activity
 } from 'lucide-react';
+import AppLayout from '@/layouts/app-layout';
+import { clientsBreadcrumbs } from '@/lib/breadcrumbs';
 
 interface Membership {
     id: number;
@@ -112,11 +114,13 @@ export default function ShowClient({ client }: Props) {
         }
     };
 
-    return (
-        <>
-            <Head title={`Cliente - ${client.name}`} />
+    const breadcrumbs = clientsBreadcrumbs.show(client.id, client.name);
 
-            <div className="space-y-6">
+    return (
+        <AppLayout breadcrumbs={breadcrumbs}>
+            <Head title={`Cliente - ${client.name}`} />
+            <div className="flex h-full flex-1 flex-col gap-6 p-6">
+                <div className="space-y-6">
                 {/* Header */}
                 <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-4">
@@ -364,7 +368,8 @@ export default function ShowClient({ client }: Props) {
                         </Card>
                     </div>
                 </div>
+                </div>
             </div>
-        </>
+        </AppLayout>
     );
 }

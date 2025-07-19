@@ -17,6 +17,8 @@ import {
     X,
     AlertCircle
 } from 'lucide-react';
+import { plansBreadcrumbs } from '@/lib/breadcrumbs';
+import AppLayout from '@/layouts/app-layout';
 
 interface Plan {
     id: number;
@@ -70,7 +72,7 @@ export default function EditPlan({ plan }: Props) {
     };
 
     return (
-        <>
+        <AppLayout breadcrumbs={plansBreadcrumbs.edit(plan.id, plan.name)}>
             <Head title={`Editar Plan - ${plan.name}`} />
 
             <div className="space-y-6">
@@ -295,6 +297,6 @@ export default function EditPlan({ plan }: Props) {
                     </div>
                 </form>
             </div>
-        </>
+        </AppLayout>
     );
 }

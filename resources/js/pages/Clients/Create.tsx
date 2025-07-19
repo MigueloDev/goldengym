@@ -16,9 +16,13 @@ import {
     MapPin,
     Calendar,
     AlertCircle,
-    X
+    X,
+    Camera
 } from 'lucide-react';
 import { Link } from '@inertiajs/react';
+import AppLayout from '@/layouts/app-layout';
+import { clientsBreadcrumbs } from '@/lib/breadcrumbs';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 interface Pathology {
     id: number;
@@ -34,12 +38,14 @@ export default function CreateClient({ pathologies }: Props) {
     const { data, setData, post, processing, errors } = useForm({
         name: '',
         email: '',
-        phone: '',
+        phone_prefix: '0412',
+        phone_number: '',
         address: '',
         birth_date: '',
         gender: '',
         status: 'active',
         notes: '',
+        profile_photo: '',
         pathologies: [] as Array<{
             id: number;
             notes: string;
@@ -86,11 +92,13 @@ export default function CreateClient({ pathologies }: Props) {
         })));
     }, [selectedPathologies]);
 
-    return (
-        <>
-            <Head title="Nuevo Cliente" />
+    const breadcrumbs = clientsBreadcrumbs.create();
 
-            <div className="space-y-6">
+    return (
+        <AppLayout breadcrumbs={breadcrumbs}>
+            <Head title="Nuevo Cliente" />
+            <div className="flex h-full flex-1 flex-col gap-6 p-6">
+                <div className="space-y-6">
                 {/* Header */}
                 <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-4">
@@ -119,6 +127,49 @@ export default function CreateClient({ pathologies }: Props) {
                             </CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-4">
+                            {/* Foto de perfil */}
+                            <div className="flex items-center space-x-4">
+                                <div className="relative">
+                                    <Avatar className="h-20 w-20">
+                                        <AvatarImage src={data.profile_photo} alt="Foto de perfil" />
+                                        <AvatarFallback className="text-lg">
+                                            {data.name ? data.name.split(' ').map(n => n[0]).join('').toUpperCase() : 'U'}
+                                        </AvatarFallback>
+                                    </Avatar>
+                                    <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="outline"
+                                        className="absolute -bottom-1 -right-1 h-8 w-8 rounded-full p-0"
+                                        onClick={() => document.getElementById('profile_photo')?.click()}
+                                    >
+                                        <Camera className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="profile_photo">Foto de perfil</Label>
+                                    <p className="text-sm text-muted-foreground">
+                                        Sube una foto de perfil para el cliente (opcional)
+                                    </p>
+                                    <input
+                                        id="profile_photo"
+                                        type="file"
+                                        accept="image/*"
+                                        className="hidden"
+                                        onChange={(e) => {
+                                            const file = e.target.files?.[0];
+                                            if (file) {
+                                                const reader = new FileReader();
+                                                reader.onload = (e) => {
+                                                    setData('profile_photo', e.target?.result as string);
+                                                };
+                                                reader.readAsDataURL(file);
+                                            }
+                                        }}
+                                    />
+                                </div>
+                            </div>
+
                             <div className="grid gap-4 md:grid-cols-2">
                                 <div className="space-y-2">
                                     <Label htmlFor="name">Nombre completo *</Label>
@@ -160,16 +211,36 @@ export default function CreateClient({ pathologies }: Props) {
 
                                 <div className="space-y-2">
                                     <Label htmlFor="phone">Teléfono</Label>
-                                    <div className="relative">
-                                        <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                                        <Input
-                                            id="phone"
-                                            value={data.phone}
-                                            onChange={(e) => setData('phone', e.target.value)}
-                                            placeholder="+34 600 000 000"
-                                            className="pl-10"
-                                        />
+                                    <div className="flex space-x-2">
+                                        <Select
+                                            value={data.phone_prefix || '0412'}
+                                            onValueChange={(value) => setData('phone_prefix', value)}
+                                        >
+                                            <SelectTrigger className="w-24">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="0412">0412</SelectItem>
+                                                <SelectItem value="0414">0414</SelectItem>
+                                                <SelectItem value="0416">0416</SelectItem>
+                                                <SelectItem value="0422">0422</SelectItem>
+                                                <SelectItem value="0424">0424</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        <div className="relative flex-1">
+                                            <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                                            <Input
+                                                id="phone"
+                                                value={data.phone_number}
+                                                onChange={(e) => setData('phone_number', e.target.value)}
+                                                placeholder="000 0000"
+                                                className="pl-10"
+                                            />
+                                        </div>
                                     </div>
+                                    <p className="text-xs text-muted-foreground">
+                                        Número completo: {data.phone_prefix || '0412'}-{data.phone_number || '000 0000'}
+                                    </p>
                                 </div>
 
                                 <div className="space-y-2">
@@ -233,7 +304,7 @@ export default function CreateClient({ pathologies }: Props) {
                                 <Textarea
                                     id="notes"
                                     value={data.notes}
-                                                                            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setData('notes', e.target.value)}
+                                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setData('notes', e.target.value)}
                                     placeholder="Información adicional sobre el cliente..."
                                     rows={3}
                                 />
@@ -313,7 +384,8 @@ export default function CreateClient({ pathologies }: Props) {
                         </Button>
                     </div>
                 </form>
+                </div>
             </div>
-        </>
+        </AppLayout>
     );
 }

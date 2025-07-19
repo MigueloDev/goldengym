@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
     ArrowLeft,
     Save,
@@ -16,8 +17,11 @@ import {
     MapPin,
     Calendar,
     AlertCircle,
-    X
+    X,
+    Camera
 } from 'lucide-react';
+import AppLayout from '@/layouts/app-layout';
+import { clientsBreadcrumbs } from '@/lib/breadcrumbs';
 
 interface Pathology {
     id: number;
@@ -35,6 +39,7 @@ interface Client {
     gender: string | null;
     status: string;
     notes: string | null;
+    profile_photo: string | null;
     pathologies: Array<{
         id: number;
         name: string;
@@ -50,15 +55,32 @@ interface Props {
 }
 
 export default function EditClient({ client, pathologies }: Props) {
+    // Parsear el teléfono existente para separar prefijo y número
+    const parsePhone = (phone: string | null) => {
+        if (!phone) return { prefix: '0412', number: '' };
+
+        // Buscar patrones como "0412-1234567" o "0412 1234567"
+        const match = phone.match(/^(\d{4})[-\s]?(.+)$/);
+        if (match) {
+            return { prefix: match[1], number: match[2] };
+        }
+
+        return { prefix: '0412', number: phone };
+    };
+
+    const phoneParts = parsePhone(client.phone);
+
     const { data, setData, put, processing, errors } = useForm({
         name: client.name,
         email: client.email || '',
-        phone: client.phone || '',
+        phone_prefix: phoneParts.prefix,
+        phone_number: phoneParts.number,
         address: client.address || '',
         birth_date: client.birth_date || '',
         gender: client.gender || '',
         status: client.status,
         notes: client.notes || '',
+        profile_photo: client.profile_photo || '',
         pathologies: [] as Array<{
             id: number;
             notes: string;
@@ -115,11 +137,13 @@ export default function EditClient({ client, pathologies }: Props) {
         })));
     }, [selectedPathologies]);
 
-    return (
-        <>
-            <Head title={`Editar Cliente - ${client.name}`} />
+    const breadcrumbs = clientsBreadcrumbs.edit(client.id, client.name);
 
-            <div className="space-y-6">
+    return (
+        <AppLayout breadcrumbs={breadcrumbs}>
+            <Head title={`Editar Cliente - ${client.name}`} />
+            <div className="flex h-full flex-1 flex-col gap-6 p-6">
+                <div className="space-y-6">
                 {/* Header */}
                 <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-4">
@@ -148,6 +172,49 @@ export default function EditClient({ client, pathologies }: Props) {
                             </CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-4">
+                            {/* Foto de perfil */}
+                            <div className="flex items-center space-x-4">
+                                <div className="relative">
+                                    <Avatar className="h-20 w-20">
+                                        <AvatarImage src={data.profile_photo} alt="Foto de perfil" />
+                                        <AvatarFallback className="text-lg">
+                                            {data.name ? data.name.split(' ').map(n => n[0]).join('').toUpperCase() : 'U'}
+                                        </AvatarFallback>
+                                    </Avatar>
+                                    <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="outline"
+                                        className="absolute -bottom-1 -right-1 h-8 w-8 rounded-full p-0"
+                                        onClick={() => document.getElementById('profile_photo')?.click()}
+                                    >
+                                        <Camera className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="profile_photo">Foto de perfil</Label>
+                                    <p className="text-sm text-muted-foreground">
+                                        Sube una foto de perfil para el cliente (opcional)
+                                    </p>
+                                    <input
+                                        id="profile_photo"
+                                        type="file"
+                                        accept="image/*"
+                                        className="hidden"
+                                        onChange={(e) => {
+                                            const file = e.target.files?.[0];
+                                            if (file) {
+                                                const reader = new FileReader();
+                                                reader.onload = (e) => {
+                                                    setData('profile_photo', e.target?.result as string);
+                                                };
+                                                reader.readAsDataURL(file);
+                                            }
+                                        }}
+                                    />
+                                </div>
+                            </div>
+
                             <div className="grid gap-4 md:grid-cols-2">
                                 <div className="space-y-2">
                                     <Label htmlFor="name">Nombre completo *</Label>
@@ -189,16 +256,36 @@ export default function EditClient({ client, pathologies }: Props) {
 
                                 <div className="space-y-2">
                                     <Label htmlFor="phone">Teléfono</Label>
-                                    <div className="relative">
-                                        <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                                        <Input
-                                            id="phone"
-                                            value={data.phone}
-                                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setData('phone', e.target.value)}
-                                            placeholder="+34 600 000 000"
-                                            className="pl-10"
-                                        />
+                                    <div className="flex space-x-2">
+                                        <Select
+                                            value={data.phone_prefix || '0412'}
+                                            onValueChange={(value) => setData('phone_prefix', value)}
+                                        >
+                                            <SelectTrigger className="w-24">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="0412">0412</SelectItem>
+                                                <SelectItem value="0414">0414</SelectItem>
+                                                <SelectItem value="0416">0416</SelectItem>
+                                                <SelectItem value="0422">0422</SelectItem>
+                                                <SelectItem value="0424">0424</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        <div className="relative flex-1">
+                                            <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                                            <Input
+                                                id="phone"
+                                                value={data.phone_number}
+                                                onChange={(e) => setData('phone_number', e.target.value)}
+                                                placeholder="000 0000"
+                                                className="pl-10"
+                                            />
+                                        </div>
                                     </div>
+                                    <p className="text-xs text-muted-foreground">
+                                        Número completo: {data.phone_prefix || '0412'}-{data.phone_number || '000 0000'}
+                                    </p>
                                 </div>
 
                                 <div className="space-y-2">
@@ -342,7 +429,8 @@ export default function EditClient({ client, pathologies }: Props) {
                         </Button>
                     </div>
                 </form>
+                </div>
             </div>
-        </>
+        </AppLayout>
     );
 }

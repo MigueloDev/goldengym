@@ -27,7 +27,7 @@ class MembershipController extends Controller
             });
         }
 
-        if ($request->filled('status')) {
+        if ($request->filled('status') && $request->status !== 'all') {
             $query->where('status', $request->status);
         }
 

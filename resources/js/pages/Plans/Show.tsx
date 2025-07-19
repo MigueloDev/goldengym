@@ -14,6 +14,8 @@ import {
     FileText,
     Activity
 } from 'lucide-react';
+import AppLayout from '@/layouts/app-layout';
+import { plansBreadcrumbs } from '@/lib/breadcrumbs';
 
 interface Membership {
     id: number;
@@ -72,9 +74,8 @@ export default function ShowPlan({ plan }: Props) {
     };
 
     return (
-        <>
+        <AppLayout breadcrumbs={plansBreadcrumbs.show(plan.id, plan.name)}>
             <Head title={`Plan - ${plan.name}`} />
-
             <div className="space-y-6">
                 {/* Header */}
                 <div className="flex items-center justify-between">
@@ -313,6 +314,6 @@ export default function ShowPlan({ plan }: Props) {
                     </div>
                 </div>
             </div>
-        </>
+        </AppLayout>
     );
 }

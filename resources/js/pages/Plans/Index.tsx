@@ -17,9 +17,10 @@ import {
     Edit,
     Trash2,
     CheckCircle,
-    XCircle
 } from 'lucide-react';
 import { Pagination } from '@/components/ui/pagination';
+import AppLayout from '@/layouts/app-layout';
+import { plansBreadcrumbs } from '@/lib/breadcrumbs';
 
 interface Plan {
     id: number;
@@ -98,10 +99,10 @@ export default function PlansIndex({ plans, filters, stats }: Props) {
     };
 
     return (
-        <>
+        <AppLayout breadcrumbs={plansBreadcrumbs.index()}>
             <Head title="Planes" />
-
-            <div className="space-y-6">
+            <div className="flex h-full flex-1 flex-col gap-6 p-6">
+                <div className="space-y-6">
                 {/* Header */}
                 <div className="flex items-center justify-between">
                     <div>
@@ -120,8 +121,8 @@ export default function PlansIndex({ plans, filters, stats }: Props) {
 
                 {/* Stats Cards */}
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <Card className='gap-1 h-18 py-2 border-golden/20 bg-golden/5'>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0">
                             <CardTitle className="text-sm font-medium">Total Planes</CardTitle>
                             <CreditCard className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
@@ -129,8 +130,8 @@ export default function PlansIndex({ plans, filters, stats }: Props) {
                             <div className="text-2xl font-bold">{stats.total}</div>
                         </CardContent>
                     </Card>
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <Card className='gap-1 h-18 py-2 border-golden/20 bg-golden/5'>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0">
                             <CardTitle className="text-sm font-medium">Planes Activos</CardTitle>
                             <CheckCircle className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
@@ -138,8 +139,8 @@ export default function PlansIndex({ plans, filters, stats }: Props) {
                             <div className="text-2xl font-bold">{stats.active}</div>
                         </CardContent>
                     </Card>
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <Card className='gap-1 h-18 py-2 border-golden/20 bg-golden/5'>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0">
                             <CardTitle className="text-sm font-medium">Total Membresías</CardTitle>
                             <Users className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
@@ -147,8 +148,8 @@ export default function PlansIndex({ plans, filters, stats }: Props) {
                             <div className="text-2xl font-bold">{stats.total_memberships}</div>
                         </CardContent>
                     </Card>
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <Card className='gap-1 h-18 py-2 border-golden/20 bg-golden/5'>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0">
                             <CardTitle className="text-sm font-medium">Membresías Activas</CardTitle>
                             <Calendar className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
@@ -159,9 +160,9 @@ export default function PlansIndex({ plans, filters, stats }: Props) {
                 </div>
 
                 {/* Filters */}
-                <Card>
+                <Card className="gap-1">
                     <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
+                        <CardTitle className="flex items-center">
                             <Filter className="h-5 w-5" />
                             Filtros
                         </CardTitle>
@@ -188,7 +189,7 @@ export default function PlansIndex({ plans, filters, stats }: Props) {
                                         <SelectValue placeholder="Todos los estados" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="">Todos</SelectItem>
+                                        <SelectItem value="all">Todos</SelectItem>
                                         <SelectItem value="active">Activo</SelectItem>
                                         <SelectItem value="inactive">Inactivo</SelectItem>
                                     </SelectContent>
@@ -338,7 +339,8 @@ export default function PlansIndex({ plans, filters, stats }: Props) {
                         />
                     </div>
                 )}
+                </div>
             </div>
-        </>
+        </AppLayout>
     );
 }

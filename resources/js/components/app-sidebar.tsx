@@ -4,28 +4,48 @@ import { NavUser } from '@/components/nav-user';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/react';
-import { BookOpen, Folder, LayoutGrid } from 'lucide-react';
+import { BookOpen, Folder, LayoutGrid, Users, Stethoscope, CreditCard, FileText, Calendar, DollarSign } from 'lucide-react';
 import AppLogo from './app-logo';
 
 const mainNavItems: NavItem[] = [
     {
-        title: 'Dashboard',
+        title: 'Principal',
         href: '/dashboard',
         icon: LayoutGrid,
+    },
+    {
+        title: 'Clientes',
+        href: '/clients',
+        icon: Users,
+    },
+    {
+        title: 'Patologías',
+        href: '/pathologies',
+        icon: Stethoscope,
+    },
+    {
+        title: 'Planes',
+        href: '/plans',
+        icon: CreditCard,
+    },
+    {
+        title: 'Membresías',
+        href: '/memberships',
+        icon: Calendar,
+    },
+    {
+        title: 'Pagos',
+        href: '/payments',
+        icon: DollarSign,
+    },
+    {
+        title: 'Documentos',
+        href: '/document-templates',
+        icon: FileText,
     },
 ];
 
 const footerNavItems: NavItem[] = [
-    {
-        title: 'Repository',
-        href: 'https://github.com/laravel/react-starter-kit',
-        icon: Folder,
-    },
-    {
-        title: 'Documentation',
-        href: 'https://laravel.com/docs/starter-kits#react',
-        icon: BookOpen,
-    },
 ];
 
 export function AppSidebar() {

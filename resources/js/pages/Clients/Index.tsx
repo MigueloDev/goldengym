@@ -25,6 +25,8 @@ import {
 } from 'lucide-react';
 import { Pagination } from '@/components/ui/pagination';
 import GenerateDocumentModal from '@/components/generate-document-modal';
+import AppLayout from '@/layouts/app-layout';
+import { clientsBreadcrumbs } from '@/lib/breadcrumbs';
 
 interface Client {
     id: number;
@@ -92,19 +94,29 @@ interface Props {
 
 export default function ClientsIndex({ clients, filters, stats, documentTemplates }: Props) {
     const [search, setSearch] = useState(filters.search || '');
-    const [status, setStatus] = useState(filters.status || '');
-    const [membershipStatus, setMembershipStatus] = useState(filters.membership_status || '');
+    const [status, setStatus] = useState(filters.status || 'all');
+    const [membershipStatus, setMembershipStatus] = useState(filters.membership_status || 'all');
     const [sortBy, setSortBy] = useState(filters.sort_by || 'created_at');
     const [sortDirection, setSortDirection] = useState(filters.sort_direction || 'desc');
 
     const handleSearch = () => {
-        router.get('/clients', {
+        const searchParams: Record<string, string> = {
             search,
-            status,
-            membership_status: membershipStatus,
             sort_by: sortBy,
             sort_direction: sortDirection,
-        }, { preserveState: true });
+        };
+
+        // Solo incluir status si no es 'all'
+        if (status !== 'all') {
+            searchParams.status = status;
+        }
+
+        // Solo incluir membership_status si no es 'all'
+        if (membershipStatus !== 'all') {
+            searchParams.membership_status = membershipStatus;
+        }
+
+        router.get('/clients', searchParams, { preserveState: true });
     };
 
     const handleDelete = (clientId: number) => {
@@ -147,11 +159,13 @@ export default function ClientsIndex({ clients, filters, stats, documentTemplate
         return age;
     };
 
-    return (
-        <>
-            <Head title="Clientes" />
+    const breadcrumbs = clientsBreadcrumbs.index();
 
-            <div className="space-y-6">
+    return (
+        <AppLayout breadcrumbs={breadcrumbs}>
+            <Head title="Clientes" />
+            <div className="flex h-full flex-1 flex-col gap-6 p-6">
+                <div className="space-y-6">
                 {/* Header */}
                 <div className="flex items-center justify-between">
                     <div>
@@ -169,42 +183,42 @@ export default function ClientsIndex({ clients, filters, stats, documentTemplate
                 </div>
 
                 {/* Stats Cards */}
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Total Clientes</CardTitle>
-                            <Users className="h-4 w-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">{stats.total}</div>
-                        </CardContent>
+                <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+                    <Card className="p-4 border-golden/20 bg-golden/5">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm font-medium text-golden-foreground">Total Clientes</p>
+                                <p className="text-2xl font-bold text-golden">{stats.total}</p>
+                            </div>
+                            <Users className="h-8 w-8 text-golden" />
+                        </div>
                     </Card>
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Clientes Activos</CardTitle>
-                            <UserCheck className="h-4 w-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">{stats.active}</div>
-                        </CardContent>
+                    <Card className="p-4 border-golden/20 bg-golden/5">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm font-medium text-golden-foreground">Clientes Activos</p>
+                                <p className="text-2xl font-bold text-golden">{stats.active}</p>
+                            </div>
+                            <UserCheck className="h-8 w-8 text-golden" />
+                        </div>
                     </Card>
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Con Membresía</CardTitle>
-                            <Clock className="h-4 w-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">{stats.with_membership}</div>
-                        </CardContent>
+                    <Card className="p-4 border-golden/20 bg-golden/5">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm font-medium text-golden-foreground">Con Membresía</p>
+                                <p className="text-2xl font-bold text-golden">{stats.with_membership}</p>
+                            </div>
+                            <Clock className="h-8 w-8 text-golden" />
+                        </div>
                     </Card>
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Expiran Pronto</CardTitle>
-                            <AlertTriangle className="h-4 w-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">{stats.expiring_soon}</div>
-                        </CardContent>
+                    <Card className="p-4 border-golden/20 bg-golden/5">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm font-medium text-golden-foreground">Expiran Pronto</p>
+                                <p className="text-2xl font-bold text-golden">{stats.expiring_soon}</p>
+                            </div>
+                            <AlertTriangle className="h-8 w-8 text-golden" />
+                        </div>
                     </Card>
                 </div>
 
@@ -238,7 +252,7 @@ export default function ClientsIndex({ clients, filters, stats, documentTemplate
                                         <SelectValue placeholder="Todos los estados" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="">Todos</SelectItem>
+                                        <SelectItem value="all">Todos</SelectItem>
                                         <SelectItem value="active">Activo</SelectItem>
                                         <SelectItem value="inactive">Inactivo</SelectItem>
                                     </SelectContent>
@@ -251,7 +265,7 @@ export default function ClientsIndex({ clients, filters, stats, documentTemplate
                                         <SelectValue placeholder="Todas las membresías" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="">Todas</SelectItem>
+                                        <SelectItem value="all">Todas</SelectItem>
                                         <SelectItem value="active">Activa</SelectItem>
                                         <SelectItem value="expired">Expirada</SelectItem>
                                         <SelectItem value="expiring_soon">Expira pronto</SelectItem>
@@ -297,8 +311,8 @@ export default function ClientsIndex({ clients, filters, stats, documentTemplate
                 {/* Clients List */}
                 <div className="grid gap-4">
                     {clients.data.map((client) => (
-                        <Card key={client.id} className="hover:shadow-md transition-shadow">
-                            <CardContent className="p-6">
+                        <Card key={client.id} className="hover:shadow-md transition-shadow py-1">
+                            <CardContent className="p-1">
                                 <div className="flex items-start justify-between">
                                     <div className="flex items-start space-x-4">
                                         <Avatar className="h-12 w-12">
@@ -403,15 +417,28 @@ export default function ClientsIndex({ clients, filters, stats, documentTemplate
                             currentPage={clients.current_page}
                             totalPages={clients.last_page}
                             onPageChange={(page: number) => {
-                                router.get('/clients', {
-                                    ...filters,
-                                    page,
-                                }, { preserveState: true });
+                                const searchParams: Record<string, string> = {
+                                    search,
+                                    sort_by: sortBy,
+                                    sort_direction: sortDirection,
+                                    page: page.toString(),
+                                };
+
+                                if (status !== 'all') {
+                                    searchParams.status = status;
+                                }
+
+                                if (membershipStatus !== 'all') {
+                                    searchParams.membership_status = membershipStatus;
+                                }
+
+                                router.get('/clients', searchParams, { preserveState: true });
                             }}
                         />
                     </div>
                 )}
+                </div>
             </div>
-        </>
+        </AppLayout>
     );
 }

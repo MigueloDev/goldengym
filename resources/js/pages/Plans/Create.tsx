@@ -17,6 +17,8 @@ import {
     X,
     AlertCircle
 } from 'lucide-react';
+import { plansBreadcrumbs } from '@/lib/breadcrumbs';
+import AppLayout from '@/layouts/app-layout';
 
 export default function CreatePlan() {
     const { data, setData, post, processing, errors } = useForm({
@@ -55,7 +57,7 @@ export default function CreatePlan() {
     };
 
     return (
-        <>
+        <AppLayout breadcrumbs={plansBreadcrumbs.create()}>
             <Head title="Nuevo Plan" />
 
             <div className="space-y-6">
@@ -280,6 +282,6 @@ export default function CreatePlan() {
                     </div>
                 </form>
             </div>
-        </>
+        </AppLayout>
     );
 }

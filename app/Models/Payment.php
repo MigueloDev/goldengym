@@ -13,6 +13,9 @@ class Payment extends Model
         'membership_id',
         'amount',
         'currency',
+        'exchange_rate',
+        'selected_price',
+        'selected_currency',
         'payment_date',
         'payment_method',
         'reference',
@@ -44,6 +47,11 @@ class Payment extends Model
     public function renewal()
     {
         return $this->hasOne(MembershipRenewal::class);
+    }
+
+    public function paymentMethods()
+    {
+        return $this->hasMany(PaymentMethod::class);
     }
 
     // Scopes

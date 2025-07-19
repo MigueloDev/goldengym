@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Head, useForm } from '@inertiajs/react';
-import { AppShell } from '@/components/app-shell';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -9,7 +8,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Plus, X } from 'lucide-react';
-import Heading from '@/components/heading';
+import AppLayout from '@/layouts/app-layout';
+import { documentTemplatesBreadcrumbs } from '@/lib/breadcrumbs';
 
 interface TemplateKey {
   id: number;
@@ -35,7 +35,7 @@ export default function DocumentTemplatesCreate({ templateKeys }: Props) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    post(route('document-templates.store'));
+    post('/document-templates');
   };
 
   const insertVariable = (variable: string) => {
@@ -48,16 +48,20 @@ export default function DocumentTemplatesCreate({ templateKeys }: Props) {
     setData('variables', data.variables.filter(v => v !== variable));
   };
 
-  return (
-    <>
-      <Head title="Crear Plantilla de Documento" />
+  const breadcrumbs = documentTemplatesBreadcrumbs.create();
 
-      <AppShell>
-        <div className="container mx-auto py-6">
-          <Heading
-            title="Crear Plantilla de Documento"
-            description="Crea una nueva plantilla para generar documentos personalizados"
-          />
+  return (
+    <AppLayout breadcrumbs={breadcrumbs}>
+      <Head title="Crear Plantilla de Documento" />
+      <div className="flex h-full flex-1 flex-col gap-6 p-6">
+        <div className="space-y-6">
+          {/* Header */}
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Crear Plantilla de Documento</h1>
+            <p className="text-muted-foreground">
+              Crea una nueva plantilla para generar documentos personalizados
+            </p>
+          </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2">
@@ -197,7 +201,7 @@ export default function DocumentTemplatesCreate({ templateKeys }: Props) {
             </div>
           </div>
         </div>
-      </AppShell>
-    </>
+      </div>
+    </AppLayout>
   );
 }

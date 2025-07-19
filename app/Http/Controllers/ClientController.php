@@ -28,11 +28,11 @@ class ClientController extends Controller
             });
         }
 
-        if ($request->filled('status')) {
+        if ($request->filled('status') && $request->status !== 'all') {
             $query->where('status', $request->status);
         }
 
-        if ($request->filled('membership_status')) {
+        if ($request->filled('membership_status') && $request->membership_status !== 'all') {
             switch ($request->membership_status) {
                 case 'active':
                     $query->whereHas('activeMembership', function ($q) {
@@ -63,9 +63,18 @@ class ClientController extends Controller
 
         $clients = $query->paginate(15)->withQueryString();
 
+        // Preparar filtros para el frontend
+        $filters = [
+            'search' => $request->get('search'),
+            'status' => $request->get('status', 'all'),
+            'membership_status' => $request->get('membership_status', 'all'),
+            'sort_by' => $request->get('sort_by', 'created_at'),
+            'sort_direction' => $request->get('sort_direction', 'desc'),
+        ];
+
         return Inertia::render('Clients/Index', [
             'clients' => $clients,
-            'filters' => $request->only(['search', 'status', 'membership_status', 'sort_by', 'sort_direction']),
+            'filters' => $filters,
             'stats' => [
                 'total' => Client::count(),
                 'active' => Client::where('status', 'active')->count(),

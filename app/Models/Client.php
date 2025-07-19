@@ -60,7 +60,7 @@ class Client extends Model
     // Relación muchos a muchos con patologías
     public function pathologies()
     {
-        return $this->belongsToMany(Pathologies::class, 'client_pathology')
+        return $this->belongsToMany(Pathologies::class, 'client_pathology', 'client_id', 'pathology_id')
                     ->withPivot('notes')
                     ->withTimestamps();
     }

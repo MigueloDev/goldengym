@@ -14,7 +14,7 @@ class PaymentController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Payment::with(['membership.client', 'membership.plan', 'registeredBy']);
+        $query = Payment::with(['membership.client', 'membership.plan', 'registeredBy', 'paymentMethods']);
 
         // Filtros
         if ($request->filled('search')) {
@@ -72,29 +72,118 @@ class PaymentController extends Controller
             $membership = Membership::with(['client', 'plan'])->find($membershipId);
         }
 
+        // Obtener membresías con deudas (solo clientes que deben dinero)
+        $membershipsWithDebt = Membership::with(['client', 'plan'])
+            ->get()
+            ->map(function ($membership) {
+                $totalPaid = $membership->payments()->sum('amount');
+
+                // Mostrar deuda basada en el precio en bolívares por defecto
+                $defaultPrice = $membership->plan->price;
+                $remainingAmount = $defaultPrice - $totalPaid;
+
+                return [
+                    'id' => $membership->id,
+                    'client' => $membership->client,
+                    'plan' => $membership->plan,
+                    'start_date' => $membership->start_date,
+                    'end_date' => $membership->end_date,
+                    'status' => $membership->status,
+                    'amount_paid' => $membership->amount_paid,
+                    'currency' => $membership->currency,
+                    'total_payments' => $totalPaid,
+                    'remaining_amount' => $remainingAmount,
+                    'plan_price_local' => $membership->plan->price,
+                    'plan_price_usd' => $membership->plan->price_usd,
+                ];
+            })
+            ->filter(function ($membership) {
+                return $membership['remaining_amount'] > 0;
+            })
+            ->values();
+
         return Inertia::render('Payments/Create', [
             'membership' => $membership,
+            'membershipsWithDebt' => $membershipsWithDebt,
         ]);
     }
 
-    /**
+        /**
      * Store a newly created resource in storage.
      */
     public function store(Request $request)
     {
         $validated = $request->validate([
             'membership_id' => 'required|exists:memberships,id',
-            'amount' => 'required|numeric|min:0',
             'currency' => 'required|in:local,usd',
+            'exchange_rate' => 'nullable|numeric|min:0',
+            'selected_price' => 'required|numeric|min:0',
+            'selected_currency' => 'required|in:local,usd',
             'payment_date' => 'required|date',
-            'payment_method' => 'required|in:cash,card,transfer,other',
-            'reference' => 'nullable|string|max:255',
+            'payment_methods_json' => 'required|json',
             'notes' => 'nullable|string|max:1000',
         ]);
 
-        $validated['registered_by'] = auth()->id();
+        $paymentMethods = json_decode($validated['payment_methods_json'], true);
 
-        Payment::create($validated);
+        // Validar métodos de pago
+        $totalAmount = 0;
+        foreach ($paymentMethods as $method) {
+            if (!isset($method['method']) || !isset($method['amount']) || empty($method['amount'])) {
+                return back()->withErrors(['payment_methods' => 'Todos los métodos de pago deben tener un monto válido.']);
+            }
+            $totalAmount += floatval($method['amount']);
+        }
+
+        if ($totalAmount <= 0) {
+            return back()->withErrors(['payment_methods' => 'El monto total debe ser mayor a 0.']);
+        }
+
+        $validated['registered_by'] = auth()->id();
+        $validated['amount'] = $totalAmount; // Guardar el total en el campo amount original
+
+        // Crear el pago principal
+        $payment = Payment::create($validated);
+
+        // Crear los métodos de pago individuales
+        foreach ($paymentMethods as $method) {
+            $payment->paymentMethods()->create([
+                'method' => $method['method'],
+                'amount' => $method['amount'],
+                'reference' => $method['reference'] ?? null,
+                'notes' => $method['notes'] ?? null,
+            ]);
+        }
+
+                // Obtener la membresía
+        $membership = Membership::find($validated['membership_id']);
+
+        // Calcular el monto adeudado basado en el precio seleccionado
+        $selectedPrice = floatval($validated['selected_price']);
+        $totalPaid = $membership->payments()->sum('amount');
+        $remainingAmount = $selectedPrice - $totalPaid;
+
+        // Si el pago cubre o excede la deuda restante, renovar la membresía
+        if ($totalAmount >= $remainingAmount) {
+            // Calcular nueva fecha de fin
+            $newEndDate = \Carbon\Carbon::parse($membership->end_date)
+                ->addDays($membership->plan->renewal_period_days);
+
+            // Actualizar la membresía
+            $membership->update([
+                'end_date' => $newEndDate,
+                'status' => 'active', // Asegurar que esté activa
+            ]);
+
+            // Crear registro de renovación
+            $membership->renewals()->create([
+                'payment_id' => $payment->id,
+                'renewal_date' => now(),
+                'previous_end_date' => $membership->getOriginal('end_date'),
+                'new_end_date' => $newEndDate,
+                'renewal_period_days' => $membership->plan->renewal_period_days,
+            ]);
+        }
 
         return redirect()->route('payments.index')
             ->with('success', 'Pago registrado exitosamente.');
