@@ -47,7 +47,7 @@ interface Membership {
 }
 
 interface PaymentMethod {
-    method: 'cash' | 'card' | 'transfer' | 'other';
+    method: 'cash_usd' | 'cash_local' | 'card_usd' | 'card_local' | 'transfer_usd' | 'transfer_local' | 'crypto' | 'other';
     amount: string;
     reference: string;
     notes: string;
@@ -68,7 +68,7 @@ export default function CreatePayment({ membership, membershipsWithDebt }: Props
         payment_date: new Date().toISOString().split('T')[0],
         notes: '',
         payment_methods_json: JSON.stringify([
-            { method: 'cash', amount: '', reference: '', notes: '' }
+            { method: 'cash_usd' as const, amount: '', reference: '', notes: '' }
         ]),
     });
 
@@ -76,7 +76,7 @@ export default function CreatePayment({ membership, membershipsWithDebt }: Props
     const [willRenew, setWillRenew] = useState(false);
     const [newEndDate, setNewEndDate] = useState<string>('');
     const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([
-        { method: 'cash', amount: '', reference: '', notes: '' }
+        { method: 'cash_usd', amount: '', reference: '', notes: '' }
     ]);
 
     // Calcular total de todos los métodos de pago
@@ -112,6 +112,7 @@ export default function CreatePayment({ membership, membershipsWithDebt }: Props
                 setNewEndDate('');
             }
         }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedMembership, totalAmount, data.selected_price]);
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -146,7 +147,7 @@ export default function CreatePayment({ membership, membershipsWithDebt }: Props
     };
 
     const addPaymentMethod = () => {
-        const newMethods = [...paymentMethods, { method: 'cash', amount: '', reference: '', notes: '' }];
+        const newMethods = [...paymentMethods, { method: 'cash_usd' as const, amount: '', reference: '', notes: '' }];
         setPaymentMethods(newMethods);
         setData('payment_methods_json', JSON.stringify(newMethods));
     };
@@ -168,9 +169,13 @@ export default function CreatePayment({ membership, membershipsWithDebt }: Props
 
     const getMethodLabel = (method: string) => {
         const labels = {
-            cash: 'Efectivo',
-            card: 'Tarjeta',
-            transfer: 'Transferencia',
+            cash_usd: 'Efectivo USD',
+            cash_local: 'Efectivo VES',
+            card_usd: 'Tarjeta USD',
+            card_local: 'Tarjeta VES',
+            transfer_usd: 'Transferencia USD',
+            transfer_local: 'Transferencia VES',
+            crypto: 'Crypto',
             other: 'Otro',
         };
         return labels[method as keyof typeof labels] || method;
@@ -435,15 +440,19 @@ export default function CreatePayment({ membership, membershipsWithDebt }: Props
                                                 <Label>Método de pago</Label>
                                                 <Select
                                                     value={method.method}
-                                                    onValueChange={(value) => updatePaymentMethod(index, 'method', value as any)}
+                                                    onValueChange={(value) => updatePaymentMethod(index, 'method', value as PaymentMethod['method'])}
                                                 >
                                                     <SelectTrigger>
-                                                        <SelectValue />
+                                                        <SelectValue placeholder={getMethodLabel(method.method)} />
                                                     </SelectTrigger>
                                                     <SelectContent>
-                                                        <SelectItem value="cash">Efectivo</SelectItem>
-                                                        <SelectItem value="card">Tarjeta</SelectItem>
-                                                        <SelectItem value="transfer">Transferencia</SelectItem>
+                                                        <SelectItem value="cash_usd">Efectivo USD</SelectItem>
+                                                        <SelectItem value="cash_local">Efectivo VES</SelectItem>
+                                                        <SelectItem value="card_usd">Tarjeta USD</SelectItem>
+                                                        <SelectItem value="card_local">Tarjeta VES</SelectItem>
+                                                        <SelectItem value="transfer_usd">Transferencia USD</SelectItem>
+                                                        <SelectItem value="transfer_local">Transferencia VES</SelectItem>
+                                                        <SelectItem value="crypto">Crypto</SelectItem>
                                                         <SelectItem value="other">Otro</SelectItem>
                                                     </SelectContent>
                                                 </Select>

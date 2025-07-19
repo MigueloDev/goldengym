@@ -240,7 +240,7 @@ export const paymentsBreadcrumbs = {
             href: `/payments/${paymentId}/edit`,
         },
     ],
-
+  }
 
 export const documentTemplatesBreadcrumbs = {
     index: (): BreadcrumbItem[] => [
