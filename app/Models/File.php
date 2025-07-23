@@ -46,10 +46,12 @@ class File extends Model
         return $query->where('type', 'document');
     }
 
-    // Métodos auxiliares
     public function getUrlAttribute()
     {
-        return Storage::url($this->path);
+        if (env('APP_ENV') === 'production') {
+            return Storage::disk('s3')->temporaryUrl($this->path, now()->addHours(24));
+        }
+        return str_replace("http://localhost", "http://localhost:8070", Storage::url($this->path));
     }
 
     public function getUrl()
