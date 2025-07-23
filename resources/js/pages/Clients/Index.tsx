@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
     Plus,
     Search,
@@ -38,6 +38,7 @@ interface Client {
     gender: string | null;
     status: string;
     notes: string | null;
+    profile_photo_url?: string | null;
     created_at: string;
     active_membership?: {
         id: number;
@@ -316,9 +317,13 @@ export default function ClientsIndex({ clients, filters, stats, documentTemplate
                                 <div className="flex items-start justify-between">
                                     <div className="flex items-start space-x-4">
                                         <Avatar className="h-12 w-12">
-                                            <AvatarFallback>
-                                                {client.name.split(' ').map(n => n[0]).join('').toUpperCase()}
-                                            </AvatarFallback>
+                                            {client.profile_photo_url ? (
+                                                <AvatarImage src={client.profile_photo_url} alt={client.name} />
+                                            ) : (
+                                                <AvatarFallback>
+                                                    {client.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                                                </AvatarFallback>
+                                            )}
                                         </Avatar>
                                         <div className="space-y-1">
                                             <div className="flex items-center space-x-2">

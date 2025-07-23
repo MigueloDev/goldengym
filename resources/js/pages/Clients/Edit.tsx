@@ -100,7 +100,7 @@ export default function EditClient({ client, pathologies }: Props) {
     gender: client.gender || '',
     status: client.status,
     notes: client.notes || '',
-    profile_photo: client.profile_photo || '',
+    profile_photo: '',
     profile_photo_url: client.profile_photo_url || '',
     pathologies: [] as Array<{
       id: number;

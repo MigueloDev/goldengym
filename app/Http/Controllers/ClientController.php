@@ -73,6 +73,8 @@ class ClientController extends Controller
             'sort_direction' => $request->get('sort_direction', 'desc'),
         ];
 
+
+
         return Inertia::render('Clients/Index', [
             'clients' => $clients,
             'filters' => $filters,
@@ -279,7 +281,6 @@ class ClientController extends Controller
             'type' => 'profile_photo',
             ]);
         } catch (\Exception $e) {
-            dd($e);
             Log::error('Error al manejar la foto de perfil: ' . $e->getMessage());
         }
     }

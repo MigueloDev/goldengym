@@ -133,7 +133,7 @@ class Client extends Model
     // Método para obtener la URL de la foto de perfil
     public function getProfilePhotoUrl()
     {
-        return $this->profilePhoto ? $this->profilePhoto->getUrl() : null;
+        return $this->profilePhoto ? $this->profilePhoto->url : null;
     }
 
     // Método para verificar si tiene foto de perfil
