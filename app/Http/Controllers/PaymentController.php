@@ -14,7 +14,7 @@ class PaymentController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Payment::with(['membership.client', 'membership.plan', 'registeredBy', 'paymentMethods', 'paymentEvidences']);
+        $query = Payment::with(['membership.client', 'membership.plan', 'registeredBy', 'paymentEvidences']);
 
         // Filtros
         if ($request->filled('search')) {

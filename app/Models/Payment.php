@@ -28,6 +28,8 @@ class Payment extends Model
         'payment_date' => 'date',
     ];
 
+    protected $appends = ['method_color', 'method_label'];
+
     public function file()
     {
         return $this->morphOne(File::class, 'fileable');

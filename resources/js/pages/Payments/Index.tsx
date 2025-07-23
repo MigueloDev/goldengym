@@ -22,14 +22,6 @@ import { Pagination } from '@/components/ui/pagination';
 import AppLayout from '@/layouts/app-layout';
 import { paymentsBreadcrumbs } from '@/lib/breadcrumbs';
 
-interface PaymentMethod {
-    id: number;
-    method: 'cash_usd' | 'cash_local' | 'card_usd' | 'card_local' | 'transfer_usd' | 'transfer_local' | 'crypto' | 'other';
-    amount: number;
-    reference: string | null;
-    notes: string | null;
-}
-
   interface Payment {
     id: number;
     membership: {
@@ -47,13 +39,15 @@ interface PaymentMethod {
     amount: number;
     currency: 'local' | 'usd';
     payment_date: string;
-    payment_methods: PaymentMethod[];
+    payment_method: string;
     notes: string | null;
     registered_by: {
         id: number;
         name: string;
     };
     created_at: string;
+    method_color: string;
+    method_label: string;
 }
 
 interface Props {
@@ -123,20 +117,9 @@ export default function PaymentsIndex({ payments, filters, stats }: Props) {
         return date.toLocaleDateString('es-ES');
     };
 
-    const getPaymentMethodBadge = (method: string) => {
-        const variants = {
-            cash: 'bg-green-100 text-green-800',
-            card: 'bg-blue-100 text-blue-800',
-            transfer: 'bg-purple-100 text-purple-800',
-            other: 'bg-gray-100 text-gray-800',
-        };
-        const labels = {
-            cash: 'Efectivo',
-            card: 'Tarjeta',
-            transfer: 'Transferencia',
-            other: 'Otro',
-        };
-        return <Badge className={variants[method as keyof typeof variants]}>{labels[method as keyof typeof labels]}</Badge>;
+    const getPaymentMethodBadge = (payment: Payment) => {
+        console.log(payment);
+        return <Badge className={payment.method_color}>{payment.method_label}</Badge>;
     };
 
     return (
@@ -345,25 +328,13 @@ export default function PaymentsIndex({ payments, filters, stats }: Props) {
                                         </TableCell>
                                         <TableCell>
                                             <div className="space-y-1">
-                                                {payment.payment_methods.map((method, index) => (
-                                                    <div key={index} className="flex items-center gap-2">
-                                                        {getPaymentMethodBadge(method.method)}
-                                                        <span className="text-xs text-muted-foreground">
-                                                            {formatCurrency(method.amount, payment.currency)}
-                                                        </span>
-                                                    </div>
-                                                ))}
+                                                {getPaymentMethodBadge(payment)}
                                             </div>
                                         </TableCell>
                                         <TableCell>
                                             <div className="text-sm">
                                                 {formatDate(payment.payment_date)}
                                             </div>
-                                            {payment.payment_methods.some(m => m.reference) && (
-                                                <div className="text-xs text-muted-foreground">
-                                                    {payment.payment_methods.filter(m => m.reference).length} referencias
-                                                </div>
-                                            )}
                                         </TableCell>
                                         <TableCell>
                                             <div className="text-sm">

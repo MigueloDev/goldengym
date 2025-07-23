@@ -18,6 +18,7 @@ interface Plan {
   id: number;
   name: string;
   price: number;
+  price_usd: number;
   duration: number;
   duration_type: string;
 }
@@ -233,7 +234,7 @@ export default function QuickRegister({ plans, clients }: Props) {
             notes={data.notes}
             onNotesChange={(notes) => setData('notes', notes)}
             errors={errors}
-            targetAmount={selectedPlan?.price || 0}
+            targetAmount={data.payment_currency === 'usd' ? selectedPlan?.price_usd || 0 : selectedPlan?.price || 0}
             showExchangeRate={true}
             showDualAmounts={true}
           />

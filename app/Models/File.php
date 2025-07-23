@@ -22,6 +22,8 @@ class File extends Model
         'type',
     ];
 
+    protected $appends = ['url'];
+
     // Relación polimórfica
     public function fileable()
     {
@@ -45,9 +47,14 @@ class File extends Model
     }
 
     // Métodos auxiliares
-    public function getUrl()
+    public function getUrlAttribute()
     {
         return Storage::url($this->path);
+    }
+
+    public function getUrl()
+    {
+        return $this->url;
     }
 
     public function getFullPath()

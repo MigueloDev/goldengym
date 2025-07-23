@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Head, Link } from '@inertiajs/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,9 +11,23 @@ import {
     CreditCard,
     Calendar,
     User,
+    Image,
+    X,
+    Download,
 } from 'lucide-react';
 import AppLayout from '@/layouts/app-layout';
 import { paymentsBreadcrumbs } from '@/lib/breadcrumbs';
+
+interface PaymentEvidence {
+    id: number;
+    name: string;
+    path: string;
+    mime_type: string;
+    size: number;
+    type: string;
+    created_at: string;
+    url: string;
+}
 
 interface Payment {
     id: number;
@@ -48,6 +62,9 @@ interface Payment {
     };
     created_at: string;
     updated_at: string;
+    method_color: string;
+    method_label: string;
+    payment_evidences: PaymentEvidence[];
 }
 
 interface Props {
@@ -55,10 +72,31 @@ interface Props {
 }
 
 export default function ShowPayment({ payment }: Props) {
+    const [selectedImage, setSelectedImage] = useState<PaymentEvidence | null>(null);
+    const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+
     const handleDelete = () => {
         if (confirm('¿Estás seguro de que quieres eliminar este pago?')) {
             // Implementar eliminación
         }
+    };
+
+    const openImageModal = (evidence: PaymentEvidence) => {
+        setSelectedImage(evidence);
+        setIsImageModalOpen(true);
+    };
+
+    const closeImageModal = () => {
+        setSelectedImage(null);
+        setIsImageModalOpen(false);
+    };
+
+    const formatFileSize = (bytes: number) => {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     };
 
     const formatCurrency = (amount: number, currency: 'local' | 'usd') => {
@@ -69,22 +107,6 @@ export default function ShowPayment({ payment }: Props) {
     const formatDate = (dateString: string) => {
         const date = new Date(dateString);
         return date.toLocaleDateString('es-ES');
-    };
-
-    const getPaymentMethodBadge = (method: string) => {
-        const variants = {
-            cash: 'bg-green-100 text-green-800',
-            card: 'bg-blue-100 text-blue-800',
-            transfer: 'bg-purple-100 text-purple-800',
-            other: 'bg-gray-100 text-gray-800',
-        };
-        const labels = {
-            cash: 'Efectivo',
-            card: 'Tarjeta',
-            transfer: 'Transferencia',
-            other: 'Otro',
-        };
-        return <Badge className={variants[method as keyof typeof variants]}>{labels[method as keyof typeof labels]}</Badge>;
     };
 
     const getStatusBadge = (status: string) => {
@@ -157,7 +179,7 @@ export default function ShowPayment({ payment }: Props) {
                                     <div>
                                         <h4 className="font-semibold mb-2">Método de Pago</h4>
                                         <div className="flex items-center gap-2">
-                                            {getPaymentMethodBadge(payment.payment_method)}
+                                            <Badge className={payment.method_color}>{payment.method_label}</Badge>
                                         </div>
                                     </div>
                                 </div>
@@ -188,6 +210,48 @@ export default function ShowPayment({ payment }: Props) {
                                 )}
                             </CardContent>
                         </Card>
+
+                        {/* Evidencias de Pago */}
+                        {payment.payment_evidences && payment.payment_evidences.length > 0 && (
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="flex items-center gap-2">
+                                        <Image className="h-5 w-5" />
+                                        Evidencias de Pago ({payment.payment_evidences.length})
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                                        {payment.payment_evidences.map((evidence) => (
+                                            <div key={evidence.id} className="relative group">
+                                                <div className="aspect-square w-1/2 h-1/2 rounded-lg border-2 border-dashed border-gray-300 overflow-hidden bg-gray-50 hover:border-gray-400 transition-colors">
+                                                    {evidence.mime_type.startsWith('image/') ? (
+                                                        <img
+                                                            src={evidence.url}
+                                                            alt={evidence.name}
+                                                            className="w-1/2 h-1/2 object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                                                            onClick={() => openImageModal(evidence)}
+                                                        />
+                                                    ) : (
+                                                        <div className="flex items-center justify-center h-full">
+                                                            <div className="text-center">
+                                                                <Download className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                                                                <p className="text-xs text-gray-500">{evidence.name}</p>
+                                                                <p className="text-xs text-gray-400">{formatFileSize(evidence.size)}</p>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <div className="mt-2">
+                                                    <p className="text-sm font-medium truncate">{evidence.name}</p>
+                                                    <p className="text-xs text-muted-foreground">{formatFileSize(evidence.size)}</p>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        )}
 
                         {/* Información de la Membresía */}
                         <Card>
@@ -314,6 +378,29 @@ export default function ShowPayment({ payment }: Props) {
                 </div>
                 </div>
             </div>
+
+            {/* Modal para zoom de imágenes */}
+            {isImageModalOpen && selectedImage && (
+                <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+                    <div className="relative max-w-4xl max-h-full">
+                        <button
+                            onClick={closeImageModal}
+                            className="absolute top-4 right-4 bg-white rounded-full p-2 shadow-lg hover:bg-gray-100 transition-colors z-10"
+                        >
+                            <X className="h-6 w-6" />
+                        </button>
+                        <img
+                            src={selectedImage.url}
+                            alt={selectedImage.name}
+                            className="max-w-full max-h-full object-contain rounded-lg"
+                        />
+                        <div className="absolute bottom-4 left-4 bg-black bg-opacity-75 text-white px-3 py-2 rounded-lg">
+                            <p className="text-sm font-medium">{selectedImage.name}</p>
+                            <p className="text-xs opacity-75">{formatFileSize(selectedImage.size)}</p>
+                        </div>
+                    </div>
+                </div>
+            )}
         </AppLayout>
     );
 }
