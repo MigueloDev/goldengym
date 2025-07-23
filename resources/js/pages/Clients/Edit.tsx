@@ -100,7 +100,7 @@ export default function EditClient({ client, pathologies }: Props) {
     gender: client.gender || '',
     status: client.status,
     notes: client.notes || '',
-    profile_photo: '',
+    profile_photo: null,
     profile_photo_url: client.profile_photo_url || '',
     pathologies: [] as Array<{
       id: number;
@@ -228,7 +228,8 @@ export default function EditClient({ client, pathologies }: Props) {
                           const reader = new FileReader();
                           reader.onload = (e) => {
                             setData('profile_photo_url', e.target?.result as string);
-                            setData('profile_photo', file as File);
+                            /* @ts-expect-error - File is not typed */
+                            setData('profile_photo', file);
                           };
                           reader.readAsDataURL(file);
                         }

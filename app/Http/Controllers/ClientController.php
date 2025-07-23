@@ -105,6 +105,11 @@ class ClientController extends Controller
      */
     public function store(Request $request)
     {
+
+        $request->merge([
+            'phone' => $request->phone_prefix . $request->phone_number
+        ]);
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'nullable|email|max:255|unique:clients,email',
@@ -177,6 +182,10 @@ class ClientController extends Controller
      */
     public function update(Request $request, Client $client)
     {
+        $request->merge([
+            'phone' => $request->phone_prefix . $request->phone_number
+        ]);
+
         try {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
@@ -270,7 +279,8 @@ class ClientController extends Controller
 
         // Subir nueva foto
         $file = $request->file('profile_photo');
-        $path = $file->store('clients/profile-photos', 'public');
+        $disk = env('APP_ENV') === 'production' ? 's3' : 'public';
+        $path = $file->store('clients/profile-photos', $disk);
 
         // Crear registro en la base de datos
         $client->files()->create([
