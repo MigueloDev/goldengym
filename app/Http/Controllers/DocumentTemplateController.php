@@ -36,7 +36,6 @@ class DocumentTemplateController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
             'content' => 'required|string',
             'variables' => 'nullable|array',
             'status' => 'required|in:active,inactive'
@@ -44,7 +43,6 @@ class DocumentTemplateController extends Controller
 
         DocumentTemplate::create([
             'name' => $request->name,
-            'description' => $request->description,
             'content' => $request->content,
             'variables' => $request->variables,
             'status' => $request->status,
@@ -78,7 +76,6 @@ class DocumentTemplateController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
             'content' => 'required|string',
             'variables' => 'nullable|array',
             'status' => 'required|in:active,inactive'
@@ -86,7 +83,6 @@ class DocumentTemplateController extends Controller
 
         $template->update([
             'name' => $request->name,
-            'description' => $request->description,
             'content' => $request->content,
             'variables' => $request->variables,
             'status' => $request->status
@@ -175,6 +171,7 @@ class DocumentTemplateController extends Controller
     {
         // Mapeo de métodos de consulta a propiedades del cliente
         $propertyMap = [
+            // Datos básicos del cliente
             'name' => $client->name,
             'email' => $client->email,
             'phone' => $client->phone,
@@ -182,16 +179,50 @@ class DocumentTemplateController extends Controller
             'birth_date' => $client->birth_date ? $client->birth_date->format('d/m/Y') : '',
             'gender' => $client->gender,
             'age' => $client->getAge(),
+            'notes' => $client->notes,
+
+            // Estado de membresía
             'membership_status' => $client->getMembershipStatus(),
             'active_membership_end_date' => $client->activeMembership ? $client->activeMembership->end_date->format('d/m/Y') : 'Sin membresía activa',
-            'current_date' => now()->format('d/m/Y'),
-            'current_time' => now()->format('H:i:s'),
+
+            // Datos de la membresía activa
+            'active_membership_plan_name' => $client->activeMembership ? $client->activeMembership->plan->name : 'Sin plan activo',
+            'active_membership_plan_price' => $client->activeMembership ? number_format($client->activeMembership->plan->price, 2) . ' Bs' : 'N/A',
+            'active_membership_start_date' => $client->activeMembership ? $client->activeMembership->start_date->format('d/m/Y') : 'N/A',
+
+            // Patologías del cliente
+            'pathologies_list' => $this->getPathologiesList($client),
+            'pathologies_count' => $client->pathologies()->count(),
+
+            // Información del gimnasio
             'gym_name' => 'María Gym',
             'gym_address' => 'Dirección del Gimnasio',
-            'gym_phone' => 'Teléfono del Gimnasio'
+            'gym_phone' => 'Teléfono del Gimnasio',
+            'gym_email' => 'info@mariagym.com',
+
+            // Fechas y tiempo
+            'current_date' => now()->format('d/m/Y'),
+            'current_time' => now()->format('H:i:s'),
+            'current_datetime' => now()->format('d/m/Y H:i:s'),
         ];
 
         return $propertyMap[$queryMethod] ?? '';
+    }
+
+    private function getPathologiesList($client)
+    {
+        $pathologies = $client->pathologies;
+
+        if ($pathologies->isEmpty()) {
+            return 'Sin patologías registradas';
+        }
+
+        $pathologiesList = $pathologies->map(function ($pathology) {
+            $notes = $pathology->pivot->notes ? " ({$pathology->pivot->notes})" : '';
+            return $pathology->name . $notes;
+        })->join(', ');
+
+        return $pathologiesList;
     }
 
     public function getTemplatesForClient()

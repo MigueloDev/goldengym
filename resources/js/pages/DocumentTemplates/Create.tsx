@@ -1,13 +1,12 @@
-import React, { useState } from 'react';
-import { Head, useForm } from '@inertiajs/react';
+import React, { useState, useMemo } from 'react';
+import { Head, useForm, Link } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Plus, X } from 'lucide-react';
+import { Plus, X, ArrowLeft, Search } from 'lucide-react';
 import AppLayout from '@/layouts/app-layout';
 import { documentTemplatesBreadcrumbs } from '@/lib/breadcrumbs';
 
@@ -15,7 +14,6 @@ interface TemplateKey {
   id: number;
   name: string;
   query_method: string;
-  description: string;
 }
 
 interface Props {
@@ -23,15 +21,27 @@ interface Props {
 }
 
 export default function DocumentTemplatesCreate({ templateKeys }: Props) {
+  const [filterText, setFilterText] = useState('');
+  const [selectedVariables, setSelectedVariables] = useState<string[]>([]);
+
   const { data, setData, post, processing, errors } = useForm({
     name: '',
-    description: '',
     content: '',
     variables: [] as string[],
     status: 'active' as 'active' | 'inactive'
   });
 
-  const [selectedVariables, setSelectedVariables] = useState<string[]>([]);
+  // Filtrar variables basado en el texto de búsqueda
+  const filteredVariables = useMemo(() => {
+    if (!filterText.trim()) {
+      return templateKeys;
+    }
+
+    return templateKeys.filter(key =>
+      key.name.toLowerCase().includes(filterText.toLowerCase()) ||
+      key.query_method.toLowerCase().includes(filterText.toLowerCase())
+    );
+  }, [templateKeys, filterText]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,11 +66,19 @@ export default function DocumentTemplatesCreate({ templateKeys }: Props) {
       <div className="flex h-full flex-1 flex-col gap-6 p-6">
         <div className="space-y-6">
           {/* Header */}
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Crear Plantilla de Documento</h1>
-            <p className="text-muted-foreground">
-              Crea una nueva plantilla para generar documentos personalizados
-            </p>
+          <div className="flex items-center gap-4">
+            <Link href="/document-templates">
+              <Button variant="outline" size="sm">
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Volver
+              </Button>
+            </Link>
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">Crear Plantilla de Documento</h1>
+              <p className="text-muted-foreground">
+                Crea una nueva plantilla para generar documentos personalizados
+              </p>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -79,23 +97,12 @@ export default function DocumentTemplatesCreate({ templateKeys }: Props) {
                       <Input
                         id="name"
                         value={data.name}
-                        onChange={(e) => setData('name', e.target.value)}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setData('name', e.target.value)}
                         placeholder="Ej: Documento de Responsabilidad"
                       />
                       {errors.name && (
                         <p className="text-sm text-destructive">{errors.name}</p>
                       )}
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="description">Descripción</Label>
-                      <Textarea
-                        id="description"
-                        value={data.description}
-                        onChange={(e) => setData('description', e.target.value)}
-                        placeholder="Describe el propósito de esta plantilla"
-                        rows={3}
-                      />
                     </div>
 
                     <div className="space-y-2">
@@ -113,14 +120,16 @@ export default function DocumentTemplatesCreate({ templateKeys }: Props) {
 
                     <div className="space-y-2">
                       <Label htmlFor="content">Contenido del Documento</Label>
-                      <Textarea
-                        id="content"
-                        value={data.content}
-                        onChange={(e) => setData('content', e.target.value)}
-                        placeholder="Escribe el contenido de tu documento. Usa las variables disponibles para personalizar el contenido."
-                        rows={15}
-                        className="font-mono"
-                      />
+                      <div className="border rounded-md">
+                        <textarea
+                          id="content"
+                          value={data.content}
+                          onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setData('content', e.target.value)}
+                          placeholder="Escribe el contenido de tu documento. Usa las variables disponibles para personalizar el contenido."
+                          rows={15}
+                          className="w-full p-3 border-0 resize-none focus:outline-none font-mono"
+                        />
+                      </div>
                       <p className="text-sm text-muted-foreground">
                         Usa las variables disponibles en el panel derecho para personalizar el contenido.
                       </p>
@@ -144,26 +153,46 @@ export default function DocumentTemplatesCreate({ templateKeys }: Props) {
                 <CardHeader>
                   <CardTitle>Variables Disponibles</CardTitle>
                   <CardDescription>
-                    Haz clic en una variable para insertarla en el contenido
+                    Busca y selecciona variables para insertar en el documento
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-2">
-                    {templateKeys.map((key) => (
-                      <div key={key.id} className="flex items-center justify-between p-2 border rounded hover:bg-muted">
-                        <div className="flex-1">
-                          <div className="font-medium">{key.name}</div>
-                          <div className="text-sm text-muted-foreground">{key.description}</div>
-                        </div>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => insertVariable(key.name)}
-                        >
-                          <Plus className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ))}
+                  <div className="space-y-4">
+                    {/* Filtro de búsqueda */}
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Buscar variables..."
+                        value={filterText}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFilterText(e.target.value)}
+                        className="pl-10"
+                      />
+                    </div>
+
+                    {/* Lista de variables filtradas */}
+                    <div className="space-y-2 max-h-96 overflow-y-auto">
+                      {filteredVariables.length === 0 ? (
+                        <p className="text-sm text-muted-foreground text-center py-4">
+                          No se encontraron variables
+                        </p>
+                      ) : (
+                        filteredVariables.map((key) => (
+                          <div key={key.id} className="flex items-center justify-between p-2 border rounded hover:bg-muted">
+                            <div className="flex-1">
+                              <div className="font-medium text-sm">{key.name}</div>
+                              <div className="text-xs text-muted-foreground">{key.query_method}</div>
+                            </div>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => insertVariable(key.name)}
+                            >
+                              <Plus className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ))
+                      )}
+                    </div>
                   </div>
                 </CardContent>
               </Card>

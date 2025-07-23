@@ -9,7 +9,7 @@ class DocumentTemplate extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name', 'description', 'content', 'variables', 'status', 'created_by'];
+    protected $fillable = ['name', 'content', 'variables', 'status', 'created_by'];
 
     protected $casts = [
         'variables' => 'array'

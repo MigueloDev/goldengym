@@ -8,8 +8,8 @@ use App\Models\Plan;
 use App\Models\Payment;
 use App\Models\MembershipRenewal;
 use Illuminate\Http\Request;
-use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
+use Inertia\Inertia;
 
 class MembershipController extends Controller
 {
@@ -72,21 +72,18 @@ class MembershipController extends Controller
     {
         DB::beginTransaction();
         try {
-        // Validación condicional basada en si se está creando un nuevo cliente o usando uno existente
         $validationRules = [
             'plan_id' => 'required|exists:plans,id',
             'start_date' => 'required|date',
             'notes' => 'nullable|string|max:1000',
             'payment_currency' => 'required|in:local,usd',
             'payment_methods_json' => 'required|json',
-            'payment_evidences.*' => 'nullable|file|mimes:jpeg,png,jpg,gif,pdf|max:5120', // 5MB max
+            'payment_evidences.*' => 'nullable|file|mimes:jpeg,png,jpg,gif,pdf|max:5120',
         ];
 
-        // Si se proporciona client_id, validar que existe
         if ($request->filled('client_id')) {
             $validationRules['client_id'] = 'required|exists:clients,id';
         } else {
-            // Si no hay client_id, validar los campos del nuevo cliente
             $validationRules['new_client'] = 'required|array';
             $validationRules['new_client.name'] = 'required|string|max:255';
             $validationRules['new_client.email'] = 'nullable|email|max:255';
@@ -97,7 +94,6 @@ class MembershipController extends Controller
 
         $paymentMethods = json_decode($validated['payment_methods_json'], true);
 
-        // Validar métodos de pago
         $totalAmount = 0;
         foreach ($paymentMethods as $method) {
             if (!isset($method['method']) || !isset($method['amount']) || empty($method['amount'])) {
@@ -110,24 +106,20 @@ class MembershipController extends Controller
             return back()->withErrors(['payment_methods' => 'El monto total debe ser mayor a 0.']);
         }
 
-        // Crear o usar cliente existente
         if ($validated['client_id']) {
             $client = Client::find($validated['client_id']);
         } else {
             $client = Client::create($validated['new_client']);
         }
 
-        // Validar que el cliente no tenga una membresía activa
         if (Membership::hasActiveMembership($client->id)) {
             return back()->withErrors([
                 'client_id' => 'Este cliente ya tiene una membresía activa. No se puede registrar una nueva membresía mientras tenga una activa.'
             ]);
         }
 
-        // Obtener plan
         $plan = Plan::find($validated['plan_id']);
 
-        // Crear membresía
         $membership = Membership::create([
             'client_id' => $client->id,
             'plan_id' => $plan->id,
@@ -140,7 +132,6 @@ class MembershipController extends Controller
             'notes' => $validated['notes'],
         ]);
 
-        // Crear múltiples pagos (uno por cada método)
         $payments = [];
         foreach ($paymentMethods as $method) {
             $payment = Payment::create([
@@ -157,7 +148,6 @@ class MembershipController extends Controller
             $payments[] = $payment;
         }
 
-        // Manejar evidencias de pago (asignar al primer pago)
         if ($request->hasFile('payment_evidences') && !empty($payments)) {
             foreach ($request->file('payment_evidences') as $evidence) {
                 $payments[0]->addPaymentEvidence($evidence);
@@ -175,7 +165,6 @@ class MembershipController extends Controller
             ->with('success', 'Membresía registrada exitosamente.');
     }
 
-    // FLUJO ESPECIAL: Renovación rápida
     public function quickRenew(Membership $membership)
     {
         $membership->load(['client', 'plan']);
@@ -187,12 +176,11 @@ class MembershipController extends Controller
         ]);
     }
 
-        public function storeQuickRenew(Request $request, Membership $membership)
+    public function storeQuickRenew(Request $request, Membership $membership)
     {
         DB::beginTransaction();
         try {
 
-        // Validar que la membresía no haya sido renovada recientemente (últimas 24 horas)
         if (MembershipRenewal::hasRecentRenewal($membership->id)) {
             return back()->withErrors([
                 'membership' => 'Esta membresía ya ha sido renovada recientemente. No se puede renovar nuevamente en las próximas 24 horas.'
@@ -204,12 +192,11 @@ class MembershipController extends Controller
             'payment_currency' => 'required|in:local,usd',
             'payment_methods_json' => 'required|json',
             'notes' => 'nullable|string|max:1000',
-            'payment_evidences.*' => 'nullable|file|mimes:jpeg,png,jpg,gif,pdf|max:5120', // 5MB max
+            'payment_evidences.*' => 'nullable|file|mimes:jpeg,png,jpg,gif,pdf|max:5120',
         ]);
 
         $paymentMethods = json_decode($validated['payment_methods_json'], true);
 
-        // Validar métodos de pago
         $totalAmount = 0;
         foreach ($paymentMethods as $method) {
             if (!isset($method['method']) || !isset($method['amount']) || empty($method['amount'])) {
@@ -224,7 +211,6 @@ class MembershipController extends Controller
 
         $plan = Plan::find($validated['plan_id']);
 
-        // Crear renovación
         $renewal = MembershipRenewal::create([
             'membership_id' => $membership->id,
             'previous_end_date' => $membership->end_date,
@@ -234,7 +220,6 @@ class MembershipController extends Controller
             'processed_by' => auth()->id(),
         ]);
 
-        // Crear múltiples pagos (uno por cada método)
         $payments = [];
         foreach ($paymentMethods as $method) {
             $payment = Payment::create([
@@ -251,14 +236,12 @@ class MembershipController extends Controller
             $payments[] = $payment;
         }
 
-        // Manejar evidencias de pago (asignar al primer pago)
         if ($request->hasFile('payment_evidences') && !empty($payments)) {
             foreach ($request->file('payment_evidences') as $evidence) {
                 $payments[0]->addPaymentEvidence($evidence);
             }
         }
 
-        // Actualizar membresía
         $membership->update([
             'plan_id' => $plan->id,
             'end_date' => $renewal->new_end_date,
@@ -268,7 +251,6 @@ class MembershipController extends Controller
             'notes' => $validated['notes'],
         ]);
 
-        // Vincular pago con renovación (usar el primer pago como referencia)
         $renewal->update(['payment_id' => $payments[0]->id]);
 
         DB::commit();
@@ -282,7 +264,6 @@ class MembershipController extends Controller
         }
     }
 
-    // Métodos CRUD estándar
     public function show(Membership $membership)
     {
         $membership->load(['client', 'plan', 'payments', 'renewals']);
