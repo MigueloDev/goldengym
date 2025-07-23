@@ -289,7 +289,7 @@ class ClientController extends Controller
             'mime_type' => $file->getMimeType(),
             'size' => $file->getSize(),
             'type' => 'profile_photo',
-            ]);
+        ]);
         } catch (\Exception $e) {
             Log::error('Error al manejar la foto de perfil: ' . $e->getMessage());
         }
