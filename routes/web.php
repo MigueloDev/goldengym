@@ -21,6 +21,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     // Rutas para clientes
+    Route::get('clients/search', [ClientController::class, 'search'])->name('clients.search');
     Route::resource('clients', ClientController::class);
     Route::post('clients/{client}', [ClientController::class, 'update'])->name('clients.update');
     Route::post('clients/{id}/restore', [ClientController::class, 'restore'])->name('clients.restore');

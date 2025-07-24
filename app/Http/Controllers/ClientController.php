@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Client;
-use App\Models\Pathologies;
+use App\Models\Pathology;
 use App\Models\DocumentTemplate;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -93,7 +93,7 @@ class ClientController extends Controller
      */
     public function create()
     {
-        $pathologies = Pathologies::orderBy('name')->get();
+        $pathologies = Pathology::orderBy('name')->get();
 
         return Inertia::render('Clients/Create', [
             'pathologies' => $pathologies,
@@ -107,13 +107,16 @@ class ClientController extends Controller
     {
 
         $request->merge([
-            'phone' => $request->phone_prefix . $request->phone_number
+            'phone' => $request->phone_prefix . $request->phone_number,
+            'identification_number' => $request->identification_prefix . '-' . $request->identification_number
         ]);
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'nullable|email|max:255|unique:clients,email',
             'phone' => 'nullable|string|max:20',
+            'identification_number' => 'required|string|max:20|unique:clients,identification_number',
+            'identification_prefix' => 'nullable|in:V,E,J,G',
             'address' => 'nullable|string|max:500',
             'birth_date' => 'nullable|date|before:today',
             'gender' => 'nullable|in:male,female,other',
@@ -141,8 +144,23 @@ class ClientController extends Controller
             }
         }
 
+        // Si la petición viene del modal de membresía, devolver los datos del cliente
+        if ($request->fromMembership) {
+            return back()->with([
+                'flash_client' => [
+                    'id' => $client->id,
+                    'name' => $client->name,
+                    'email' => $client->email
+                ],
+                'flash_success' => true,
+                'flash_message' => 'Cliente creado exitosamente.'
+            ]);
+        }
+
+        // Si es una petición normal, redirigir
         return redirect()->route('clients.index')
-            ->with('success', 'Cliente creado exitosamente.');
+            ->with('flash_success', true)
+            ->with('flash_message', 'Cliente creado exitosamente.');
     }
 
     /**
@@ -169,7 +187,7 @@ class ClientController extends Controller
     public function edit(Client $client)
     {
         $client->load(['pathologies', 'profilePhoto']);
-        $pathologies = Pathologies::orderBy('name')->get();
+        $pathologies = Pathology::orderBy('name')->get();
 
         return Inertia::render('Clients/Edit', [
             'client' => $client,
@@ -183,7 +201,8 @@ class ClientController extends Controller
     public function update(Request $request, Client $client)
     {
         $request->merge([
-            'phone' => $request->phone_prefix . $request->phone_number
+            'phone' => $request->phone_prefix . $request->phone_number,
+            'identification_number' => $request->identification_prefix . '-' . $request->identification_number
         ]);
 
         try {
@@ -191,6 +210,8 @@ class ClientController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'nullable|email|max:255|unique:clients,email,' . $client->id,
             'phone' => 'nullable|string|max:20',
+            'identification_number' => 'nullable|string|max:20|unique:clients,identification_number,' . $client->id,
+            'identification_prefix' => 'nullable|in:V,E,J,G',
             'address' => 'nullable|string|max:500',
             'birth_date' => 'nullable|date|before:today',
             'gender' => 'nullable|in:male,female,other',
@@ -204,7 +225,6 @@ class ClientController extends Controller
 
         $client->update($validated);
 
-        // Manejar foto de perfil si se proporcionó
         if ($request->hasFile('profile_photo')) {
             $this->handleProfilePhoto($request, $client);
         }
@@ -223,10 +243,15 @@ class ClientController extends Controller
         }
 
         return redirect()->route('clients.index')
-            ->with('success', 'Cliente actualizado exitosamente.');
+            ->with('flash_success', true)
+            ->with('flash_message', 'Cliente actualizado exitosamente.');
+
         } catch (\Exception $e) {
-            dd($e);
             Log::error('Error al actualizar el cliente: ' . $e->getMessage());
+            return back()->withErrors([
+                'flash_success' => false,
+                'flash_message' => 'Error al actualizar el cliente',
+            ]);
         }
     }
 
@@ -238,7 +263,8 @@ class ClientController extends Controller
         $client->delete();
 
         return redirect()->route('clients.index')
-            ->with('success', 'Cliente eliminado exitosamente.');
+            ->with('flash_success', true)
+            ->with('flash_message', 'Cliente eliminado exitosamente.');
     }
 
     /**
@@ -250,7 +276,8 @@ class ClientController extends Controller
         $client->restore();
 
         return redirect()->route('clients.index')
-            ->with('success', 'Cliente restaurado exitosamente.');
+            ->with('flash_success', true)
+            ->with('flash_message', 'Cliente restaurado exitosamente.');
     }
 
     /**
@@ -262,7 +289,8 @@ class ClientController extends Controller
         $client->forceDelete();
 
         return redirect()->route('clients.index')
-            ->with('success', 'Cliente eliminado permanentemente.');
+            ->with('flash_success', true)
+            ->with('flash_message', 'Cliente eliminado permanentemente.');
     }
 
         /**
@@ -271,28 +299,47 @@ class ClientController extends Controller
     private function handleProfilePhoto(Request $request, Client $client)
     {
         try {
-        // Eliminar foto de perfil anterior si existe
-        $existingPhoto = $client->profilePhoto;
-        if ($existingPhoto) {
-            $existingPhoto->delete();
-        }
+            if (!$request->hasFile('profile_photo')) {
+                return;
+            }
 
-        // Subir nueva foto
-        $file = $request->file('profile_photo');
-        $disk = env('APP_ENV') === 'production' ? 's3' : 'public';
-        $path = $file->store('clients/profile-photos', $disk);
+            $existingPhoto = $client->profilePhoto;
+            if ($existingPhoto) {
+                $existingPhoto->delete();
+            }
 
-        // Crear registro en la base de datos
-        $client->files()->create([
-            'name' => $file->getClientOriginalName(),
-            'path' => $path,
-            'mime_type' => $file->getMimeType(),
-            'size' => $file->getSize(),
-            'type' => 'profile_photo',
-        ]);
+            $file = $request->file('profile_photo');
+            $disk = env('APP_ENV') === 'production' ? 's3' : 'public';
+            $path = $file->store('clients/profile-photos', $disk);
+            $client->files()->create([
+                'name' => $file->getClientOriginalName(),
+                'path' => $path,
+                'mime_type' => $file->getMimeType(),
+                'size' => $file->getSize(),
+                'type' => 'profile_photo',
+            ]);
         } catch (\Exception $e) {
             Log::error('Error al manejar la foto de perfil: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Search clients for autocomplete.
+     */
+    public function search(Request $request)
+    {
+        $search = $request->get('query', '');
+
+        $clients = Client::where(function ($query) use ($search) {
+            $query->where('name', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%")
+                  ->orWhere('identification_number', 'like', "%{$search}%");
+        })
+        ->where('status', 'active')
+        ->limit(10)
+        ->get(['id', 'name', 'email', 'identification_number']);
+
+        return response()->json($clients);
     }
 
     /**

@@ -1,4 +1,6 @@
 import { Head, useForm, router } from '@inertiajs/react';
+import { useState } from 'react';
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -6,19 +8,19 @@ import { Badge } from '@/components/ui/badge';
 import { Icon } from '@/components/icon';
 import Heading from '@/components/heading';
 import { ArrowLeft, RefreshCw, Calendar } from 'lucide-react';
-import { useState } from 'react';
-import React from 'react';
-import { membershipsBreadcrumbs } from '@/lib/breadcrumbs';
 import AppLayout from '@/layouts/app-layout';
+import { membershipsBreadcrumbs } from '@/lib/breadcrumbs';
 import PaymentMethodsForm from '@/components/payment-methods-form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
 import { bodyToFetch } from '@/helpers';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { useToast } from '@/components/ui/toast';
 
 interface Plan {
   id: number;
   name: string;
   price: number;
+  price_usd: number;
   duration: number;
   duration_type: string;
 }
@@ -60,30 +62,48 @@ export default function QuickRenew({ membership, plans }: Props) {
     { method: 'cash_usd', amount: '', type: 'usd', reference: '', notes: '' }
   ]);
   const [paymentEvidences, setPaymentEvidences] = useState<File[]>([]);
+  const { addToast } = useToast();
 
   const { data, setData, processing, errors } = useForm({
     plan_id: membership.plan.id.toString(),
     payment_currency: membership.currency,
     notes: '',
-    exchange_rate: '',
     payment_methods_json: JSON.stringify([
       { method: 'cash_usd' as const, amount: '', type: 'usd', reference: '', notes: '' }
     ]),
+    exchange_rate: '',
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const paymentMethods = JSON.parse(data.payment_methods_json);
+
     const form = {
       ...data,
-      payment_methods: paymentMethods,
       payment_evidences: paymentEvidences,
     }
     const formData = bodyToFetch(form, true, true);
-    router.post(route('memberships.store-quick-renew', membership.id), formData);
+
+    router.post(route('memberships.store-quick-renew', membership.id), formData, {
+      onError: (errors) => {
+        console.log("Se recibieron errores");
+        console.log('Errores recibidos:', errors);
+      },
+      onSuccess: (response) => {
+        console.log(response);
+        addToast({
+          title: 'Membresía renovada exitosamente',
+          message: 'La membresía ha sido renovada exitosamente',
+          type: 'success'
+        });
+        console.log('Éxito en el envío');
+      }
+    });
   };
 
   const selectedPlan = plans.find(plan => plan.id.toString() === data.plan_id);
+  React.useEffect(() => {
+    setData('payment_methods_json', JSON.stringify(paymentMethods));
+  }, [paymentMethods, setData]);
 
   const formatCurrency = (amount: number, currency: string) => {
     const symbol = currency === 'usd' ? '$' : 'Bs';
@@ -95,24 +115,34 @@ export default function QuickRenew({ membership, plans }: Props) {
     return date.toLocaleDateString('es-ES');
   };
 
-  // Actualizar payment_methods_json cuando cambien los métodos
-  React.useEffect(() => {
-    setData('payment_methods_json', JSON.stringify(paymentMethods));
-  }, [paymentMethods, setData]);
-
   return (
     <AppLayout breadcrumbs={membershipsBreadcrumbs.create()}>
       <Head title="Renovación Rápida - Membresía" />
-
       <div className="flex h-full flex-1 flex-col gap-6 p-6">
         <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 mb-0">
           <Button variant="outline" size="sm" onClick={() => window.history.back()}>
             <Icon iconNode={ArrowLeft} className="mr-2 h-4 w-4" />
             Volver
           </Button>
           <Heading title="Renovación Rápida de Membresía" />
+          <div className="flex items-center gap-4">
+            {Object.keys(errors).length > 0 && (
+              <Alert variant="destructive">
+                <AlertTitle>Errores de Validación</AlertTitle>
+                <AlertDescription>
+                  <ul className="list-disc list-inside">
+                    {Object.entries(errors).map(([key, error]) => (
+                      <li key={key}>
+                        <strong>{key}:</strong> {Array.isArray(error) ? error[0] : error}
+                      </li>
+                    ))}
+                  </ul>
+                </AlertDescription>
+              </Alert>
+            )}
+          </div>
         </div>
 
         {/* Información Actual */}
@@ -152,7 +182,7 @@ export default function QuickRenew({ membership, plans }: Props) {
           </CardContent>
         </Card>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-2">
           {/* Nueva Membresía */}
           <Card>
             <CardHeader>
@@ -178,20 +208,9 @@ export default function QuickRenew({ membership, plans }: Props) {
                 </Select>
                 {errors.plan_id && <p className="text-sm text-red-600">{errors.plan_id}</p>}
               </div>
-              <div>
-                <Label htmlFor="notes">Notas</Label>
-                <Textarea
-                  id="notes"
-                  value={data.notes}
-                  onChange={(e) => setData('notes', e.target.value)}
-                  placeholder="Notas sobre la renovación..."
-                />
-                {errors.notes && <p className="text-sm text-red-600">{errors.notes}</p>}
-              </div>
             </CardContent>
           </Card>
 
-          {/* Pago */}
           <PaymentMethodsForm
             paymentCurrency={data.payment_currency as 'local' | 'usd'}
             onPaymentCurrencyChange={(currency) => setData('payment_currency', currency)}
@@ -202,46 +221,11 @@ export default function QuickRenew({ membership, plans }: Props) {
             notes={data.notes}
             onNotesChange={(notes) => setData('notes', notes)}
             errors={errors}
-            targetAmount={selectedPlan?.price || 0}
+            targetAmount={data.payment_currency === 'usd' ? selectedPlan?.price_usd || 0 : selectedPlan?.price || 0}
             showExchangeRate={true}
             exchangeRate={data.exchange_rate}
             onExchangeRateChange={(rate) => setData('exchange_rate', rate)}
           />
-
-          {/* Resumen */}
-          {selectedPlan && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Resumen de Renovación</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span>Cliente:</span>
-                    <span className="font-medium">{membership.client.name}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Plan anterior:</span>
-                    <span>{membership.plan.name}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Nuevo plan:</span>
-                    <span className="font-medium">{selectedPlan.name}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Fecha de fin actual:</span>
-                    <span>{formatDate(membership.end_date)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Monto a pagar:</span>
-                    <span className="font-bold">
-                      {formatCurrency(paymentMethods.reduce((sum, method) => sum + (parseFloat(method.amount) || 0), 0), data.payment_currency as 'local' | 'usd')}
-                    </span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
 
           {/* Submit */}
           <div className="flex justify-end gap-4">
@@ -254,7 +238,7 @@ export default function QuickRenew({ membership, plans }: Props) {
             </Button>
           </div>
         </form>
-      </div>
+        </div>
       </div>
     </AppLayout>
   );

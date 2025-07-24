@@ -19,12 +19,14 @@ class Membership extends Model
         'currency',
         'registered_by',
         'notes',
+        'plan_price_paid',
     ];
 
     protected $casts = [
         'start_date' => 'date',
         'end_date' => 'date',
         'amount_paid' => 'float',
+        'plan_price_paid' => 'float',
     ];
 
     // Relaciones

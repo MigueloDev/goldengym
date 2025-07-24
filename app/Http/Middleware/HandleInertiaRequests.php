@@ -6,6 +6,7 @@ use Illuminate\Foundation\Inspiring;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 use Tighten\Ziggy\Ziggy;
+use Illuminate\Support\Str;
 
 class HandleInertiaRequests extends Middleware
 {
@@ -39,6 +40,10 @@ class HandleInertiaRequests extends Middleware
     {
         [$message, $author] = str(Inspiring::quotes()->random())->explode('-');
 
+        $flash = collect($request->session()->all())
+        ->filter(fn ($_, $key) => Str::startsWith($key, 'flash_'))
+        ->mapWithKeys(fn ($value, $key) => [Str::after($key, 'flash_') => $value]);
+
         return [
             ...parent::share($request),
             'name' => config('app.name'),
@@ -51,6 +56,7 @@ class HandleInertiaRequests extends Middleware
                 'location' => $request->url(),
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
+            'flash' => fn () => $flash->all()
         ];
     }
 }

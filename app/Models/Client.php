@@ -15,6 +15,8 @@ class Client extends Model
         'phone',
         'address',
         'birth_date',
+        'identification_number',
+        'identification_prefix',
         'gender',
         'status',
         'notes',
@@ -62,7 +64,7 @@ class Client extends Model
     // Relación muchos a muchos con patologías
     public function pathologies()
     {
-        return $this->belongsToMany(Pathologies::class, 'client_pathology', 'client_id', 'pathology_id')
+        return $this->belongsToMany(Pathology::class, 'client_pathology', 'client_id', 'pathology_id')
                     ->withPivot('notes')
                     ->withTimestamps();
     }

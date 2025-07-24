@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Pathologies;
+use App\Models\Pathology;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -13,7 +13,7 @@ class PathologyController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Pathologies::query();
+        $query = Pathology::query();
 
         // Filtros
         if ($request->filled('search')) {
@@ -31,7 +31,7 @@ class PathologyController extends Controller
             'pathologies' => $pathologies,
             'filters' => $request->only(['search', 'sort_by', 'sort_direction']),
             'stats' => [
-                'total' => Pathologies::count(),
+                'total' => Pathology::count(),
             ]
         ]);
     }
@@ -54,7 +54,7 @@ class PathologyController extends Controller
             'description' => 'nullable|string|max:500',
         ]);
 
-        Pathologies::create($validated);
+        Pathology::create($validated);
 
         return redirect()->route('pathologies.index')
             ->with('success', 'Patología creada exitosamente.');
@@ -63,7 +63,7 @@ class PathologyController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(Pathologies $pathology)
+    public function show(Pathology $pathology)
     {
         $pathology->load('clients');
 
@@ -75,7 +75,7 @@ class PathologyController extends Controller
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit(Pathologies $pathology)
+    public function edit(Pathology $pathology)
     {
         return Inertia::render('Pathologies/Edit', [
             'pathology' => $pathology,
@@ -85,7 +85,7 @@ class PathologyController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, Pathologies $pathology)
+    public function update(Request $request, Pathology $pathology)
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255|unique:pathologies,name,' . $pathology->id,
@@ -101,7 +101,7 @@ class PathologyController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Pathologies $pathology)
+    public function destroy(Pathology $pathology)
     {
         // Verificar si la patología está siendo usada por algún cliente
         if ($pathology->clients()->count() > 0) {

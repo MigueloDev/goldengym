@@ -129,17 +129,44 @@ export default function PaymentMethodsForm({
     onPaymentMethodsChange(newMethods);
   };
 
+  // Función para encontrar un método de pago vacío
+  const findEmptyPaymentMethod = () => {
+    return paymentMethods.findIndex(method =>
+      (!method.amount_usd || method.amount_usd === '') &&
+      (!method.amount_bs || method.amount_bs === '') &&
+      (!method.amount || method.amount === '')
+    );
+  };
+
   const addPaymentMethod = () => {
-    const newMethods = [...paymentMethods, {
-      method: 'cash_usd' as const,
-      type: 'usd' as const,
-      amount: '',
-      amount_usd: '',
-      amount_bs: '',
-      reference: '',
-      notes: ''
-    }];
-    onPaymentMethodsChange(newMethods);
+    const emptyIndex = findEmptyPaymentMethod();
+
+    if (emptyIndex !== -1) {
+      // Reutilizar método vacío existente
+      const newMethods = [...paymentMethods];
+      newMethods[emptyIndex] = {
+        method: 'cash_usd' as const,
+        type: 'usd' as const,
+        amount: '',
+        amount_usd: '',
+        amount_bs: '',
+        reference: '',
+        notes: ''
+      };
+      onPaymentMethodsChange(newMethods);
+    } else {
+      // Agregar nuevo método solo si no hay vacíos
+      const newMethods = [...paymentMethods, {
+        method: 'cash_usd' as const,
+        type: 'usd' as const,
+        amount: '',
+        amount_usd: '',
+        amount_bs: '',
+        reference: '',
+        notes: ''
+      }];
+      onPaymentMethodsChange(newMethods);
+    }
   };
 
   const removePaymentMethod = (index: number) => {
@@ -295,16 +322,26 @@ export default function PaymentMethodsForm({
                           className="h-8 text-xs"
                           onClick={() => {
                             // Lógica para agregar método de pago con el restante USD
+                            const emptyIndex = findEmptyPaymentMethod();
                             const newMethod = {
                               method: 'cash_usd' as const,
                               type: 'usd' as const,
                               amount: '',
                               amount_usd: remainingUSD.abs().toString(),
                               amount_bs: '',
-                              reference: 'Pago restante',
+                              reference: '',
                               notes: ''
                             };
-                            onPaymentMethodsChange([...paymentMethods, newMethod]);
+
+                            if (emptyIndex !== -1) {
+                              // Reutilizar método vacío existente
+                              const newMethods = [...paymentMethods];
+                              newMethods[emptyIndex] = newMethod;
+                              onPaymentMethodsChange(newMethods);
+                            } else {
+                              // Agregar nuevo método solo si no hay vacíos
+                              onPaymentMethodsChange([...paymentMethods, newMethod]);
+                            }
                           }}
                         >
                           <span className="flex flex-col items-center">
@@ -325,6 +362,7 @@ export default function PaymentMethodsForm({
                             className="h-8 text-xs"
                             onClick={() => {
                               // Lógica para agregar método de pago con el restante Bs
+                              const emptyIndex = findEmptyPaymentMethod();
                               const newMethod = {
                                 method: 'cash_local' as const,
                                 type: 'bs' as const,
@@ -334,7 +372,16 @@ export default function PaymentMethodsForm({
                                 reference: '',
                                 notes: ''
                               };
-                              onPaymentMethodsChange([...paymentMethods, newMethod]);
+
+                              if (emptyIndex !== -1) {
+                                // Reutilizar método vacío existente
+                                const newMethods = [...paymentMethods];
+                                newMethods[emptyIndex] = newMethod;
+                                onPaymentMethodsChange(newMethods);
+                              } else {
+                                // Agregar nuevo método solo si no hay vacíos
+                                onPaymentMethodsChange([...paymentMethods, newMethod]);
+                              }
                             }}
                           >
                             <span className="flex flex-col items-center">
@@ -387,11 +434,11 @@ export default function PaymentMethodsForm({
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="cash_usd">Efectivo USD</SelectItem>
-                      <SelectItem value="cash_local">Efectivo VES</SelectItem>
+                      <SelectItem value="cash_local">Efectivo Bs</SelectItem>
                       <SelectItem value="card_usd">Tarjeta USD</SelectItem>
-                      <SelectItem value="card_local">Tarjeta VES</SelectItem>
+                      <SelectItem value="card_local">Tarjeta Bs</SelectItem>
                       <SelectItem value="transfer_usd">Transferencia USD</SelectItem>
-                      <SelectItem value="transfer_local">Transferencia VES</SelectItem>
+                      <SelectItem value="transfer_local">Transferencia Bs</SelectItem>
                       <SelectItem value="crypto">Crypto</SelectItem>
                     </SelectContent>
                   </Select>

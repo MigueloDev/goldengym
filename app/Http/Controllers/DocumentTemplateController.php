@@ -50,7 +50,8 @@ class DocumentTemplateController extends Controller
         ]);
 
         return redirect()->route('document-templates.index')
-            ->with('success', 'Plantilla creada exitosamente');
+            ->with('flash_success', true)
+            ->with('flash_message', 'Plantilla creada exitosamente');
     }
 
     public function show(DocumentTemplate $template)
@@ -89,7 +90,8 @@ class DocumentTemplateController extends Controller
         ]);
 
         return redirect()->route('document-templates.index')
-            ->with('success', 'Plantilla actualizada exitosamente');
+            ->with('flash_success', true)
+            ->with('flash_message', 'Plantilla actualizada exitosamente');
     }
 
     public function destroy(DocumentTemplate $template)
@@ -97,57 +99,70 @@ class DocumentTemplateController extends Controller
         $template->delete();
 
         return redirect()->route('document-templates.index')
-            ->with('success', 'Plantilla eliminada exitosamente');
+            ->with('flash_success', true)
+            ->with('flash_message', 'Plantilla eliminada exitosamente');
     }
 
     public function generateDocument(Request $request)
     {
-        $request->validate([
-            'client_id' => 'required|exists:clients,id',
-            'template_id' => 'required|exists:document_templates,id'
-        ]);
+        try {
+            $request->validate([
+                'client_id' => 'required|exists:clients,id',
+                'template_id' => 'required|exists:document_templates,id'
+            ]);
 
-        $client = Client::findOrFail($request->client_id);
-        $template = DocumentTemplate::findOrFail($request->template_id);
+            $client = Client::findOrFail($request->client_id);
+            $template = DocumentTemplate::findOrFail($request->template_id);
 
-        // Generar el contenido del documento con las variables reemplazadas
-        $content = $this->replaceTemplateVariables($template->content, $client);
+            // Generar el contenido del documento con las variables reemplazadas
+            $content = $this->replaceTemplateVariables($template->content, $client);
 
-        // Configurar DomPDF
-        $options = new Options();
-        $options->set('isHtml5ParserEnabled', true);
-        $options->set('isPhpEnabled', true);
-        $options->set('isRemoteEnabled', true);
+            // Configurar DomPDF
+            $options = new Options();
+            $options->set('isHtml5ParserEnabled', true);
+            $options->set('isPhpEnabled', true);
+            $options->set('isRemoteEnabled', true);
 
-        $dompdf = new Dompdf($options);
-        $dompdf->loadHtml($content);
-        $dompdf->setPaper('A4', 'portrait');
-        $dompdf->render();
+            $dompdf = new Dompdf($options);
+            $dompdf->loadHtml($content);
+            $dompdf->setPaper('A4', 'portrait');
+            $dompdf->render();
 
-        // Generar nombre único para el archivo
-        $fileName = 'documento_' . $client->id . '_' . time() . '.pdf';
-        $filePath = 'documents/' . $fileName;
+            $fileName = 'documento_' . $client->id . '_' . time() . '.pdf';
+            $filePath = 'documents/' . $fileName;
 
-        // Guardar el PDF en storage
-        Storage::put('public/' . $filePath, $dompdf->output());
+            Storage::put($filePath, $dompdf->output());
 
-        // Crear registro en la tabla files
-        $file = File::create([
-            'fileable_id' => $client->id,
-            'fileable_type' => Client::class,
-            'name' => $template->name . ' - ' . $client->name,
-            'path' => $filePath,
-            'mime_type' => 'application/pdf',
-            'size' => Storage::size('public/' . $filePath),
-            'type' => 'generated_document'
-        ]);
+            $file = File::create([
+                'fileable_id' => $client->id,
+                'fileable_type' => Client::class,
+                'name' => $template->name . ' - ' . $client->name,
+                'path' => $filePath,
+                'mime_type' => 'application/pdf',
+                'size' => Storage::size($filePath),
+                'type' => 'generated_document'
+            ]);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Documento generado exitosamente',
-            'file' => $file,
-            'download_url' => Storage::url($filePath)
-        ]);
+            if (env('APP_ENV') === 'production') {
+                $url = Storage::url($filePath);
+            } else {
+                $url = str_replace('localhost', 'localhost:8070', Storage::url($filePath));
+            }
+
+            // Retornar respuesta de Inertia con los datos para la descarga
+            return back()->with([
+                'flash_success' => true,
+                'flash_message' => 'Documento generado exitosamente',
+                'flash_title' => 'Documento generado exitosamente',
+                'flash_download_url' => $url,
+            ]);
+
+        } catch (\Exception $e) {
+            return back()->withErrors([
+                'flash_success' => false,
+                'flash_message' => 'Error al generar el documento',
+            ]);
+        }
     }
 
     private function replaceTemplateVariables($content, $client)
@@ -180,6 +195,7 @@ class DocumentTemplateController extends Controller
             'gender' => $client->gender,
             'age' => $client->getAge(),
             'notes' => $client->notes,
+            'client_identification' => $client->identification_number,
 
             // Estado de membresía
             'membership_status' => $client->getMembershipStatus(),
@@ -195,7 +211,7 @@ class DocumentTemplateController extends Controller
             'pathologies_count' => $client->pathologies()->count(),
 
             // Información del gimnasio
-            'gym_name' => 'María Gym',
+            'gym_name' => 'Golden Gym',
             'gym_address' => 'Dirección del Gimnasio',
             'gym_phone' => 'Teléfono del Gimnasio',
             'gym_email' => 'info@mariagym.com',
@@ -212,6 +228,10 @@ class DocumentTemplateController extends Controller
     private function getPathologiesList($client)
     {
         $pathologies = $client->pathologies;
+
+        if (!$pathologies) {
+            return 'Sin patologías registradas';
+        }
 
         if ($pathologies->isEmpty()) {
             return 'Sin patologías registradas';

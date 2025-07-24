@@ -205,7 +205,8 @@ class PaymentController extends Controller
         }
 
         return redirect()->route('payments.index')
-            ->with('success', 'Pagos registrados exitosamente.');
+            ->with('flash_success', true)
+            ->with('flash_message', 'Pagos registrados exitosamente.');
     }
 
     /**
@@ -257,7 +258,8 @@ class PaymentController extends Controller
         }
 
         return redirect()->route('payments.index')
-            ->with('success', 'Pago actualizado exitosamente.');
+            ->with('flash_success', true)
+            ->with('flash_message', 'Pago actualizado exitosamente.');
     }
 
     /**
@@ -268,7 +270,8 @@ class PaymentController extends Controller
         $payment->delete();
 
         return redirect()->route('payments.index')
-            ->with('success', 'Pago eliminado exitosamente.');
+            ->with('flash_success', true)
+            ->with('flash_message', 'Pago eliminado exitosamente.');
     }
 
     /**

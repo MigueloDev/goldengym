@@ -36,6 +36,8 @@ interface Client {
   phone: string | null;
   address: string | null;
   birth_date: string | null;
+  identification_number: string | null;
+  identification_prefix: string | null;
   gender: string | null;
   status: string;
   notes: string | null;
@@ -88,13 +90,34 @@ export default function EditClient({ client, pathologies }: Props) {
     return { prefix: '0412', number: phone };
   };
 
+  // Parsear el número de identificación para separar prefijo y número
+  const parseIdentification = (identificationNumber: string | null) => {
+    if (!identificationNumber) return { prefix: 'V', number: '' };
+
+    // Buscar patrones como "V-12345678" o "V 12345678" o "V12345678"
+    const match = identificationNumber.match(/^([VEJG])[-\s]?(\d+)$/);
+    if (match) {
+      return { prefix: match[1], number: match[2] };
+    }
+
+    // Si no tiene prefijo, asumir V
+    if (/^\d+$/.test(identificationNumber)) {
+      return { prefix: 'V', number: identificationNumber };
+    }
+
+    return { prefix: 'V', number: identificationNumber };
+  };
+
   const phoneParts = parsePhone(client.phone);
+  const identificationParts = parseIdentification(client.identification_number);
 
   const { data, setData, post, processing, errors } = useForm({
     name: client.name,
     email: client.email || '',
     phone_prefix: phoneParts.prefix,
     phone_number: phoneParts.number,
+    identification_prefix: identificationParts.prefix,
+    identification_number: identificationParts.number,
     address: client.address || '',
     birth_date: formatDateForInput(client.birth_date),
     gender: client.gender || '',
@@ -273,6 +296,44 @@ export default function EditClient({ client, pathologies }: Props) {
                       <p className="text-sm text-red-500 flex items-center gap-1">
                         <AlertCircle className="h-4 w-4" />
                         {errors.email}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="identification">Número de identificación</Label>
+                    <div className="flex space-x-2">
+                      <Select
+                        value={data.identification_prefix || 'V'}
+                        onValueChange={(value) => setData('identification_prefix', value)}
+                      >
+                        <SelectTrigger className="w-16">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="V">V</SelectItem>
+                          <SelectItem value="E">E</SelectItem>
+                          <SelectItem value="J">J</SelectItem>
+                          <SelectItem value="G">G</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <div className="relative flex-1">
+                        <Input
+                          id="identification"
+                          value={data.identification_number}
+                          onChange={(e) => setData('identification_number', e.target.value)}
+                          placeholder="12345678"
+                          className={errors.identification_number ? 'border-red-500' : ''}
+                        />
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Número completo: {data.identification_prefix || 'V'}-{data.identification_number || '12345678'}
+                    </p>
+                    {errors.identification_number && (
+                      <p className="text-sm text-red-500 flex items-center gap-1">
+                        <AlertCircle className="h-4 w-4" />
+                        {errors.identification_number}
                       </p>
                     )}
                   </div>

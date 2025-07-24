@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Head, useForm } from '@inertiajs/react';
+import { useForm } from '@inertiajs/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,20 +8,24 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import {
-    ArrowLeft,
-    Save,
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import {
     User,
     Mail,
     Phone,
-    MapPin,
     Calendar,
     AlertCircle,
     X,
-    Camera
+    Camera,
+    Save,
+    Plus
 } from 'lucide-react';
-import { Link } from '@inertiajs/react';
-import AppLayout from '@/layouts/app-layout';
-import { clientsBreadcrumbs } from '@/lib/breadcrumbs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 interface Pathology {
@@ -30,12 +34,22 @@ interface Pathology {
     description: string | null;
 }
 
-interface Props {
+interface CreateClientModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    onClientCreated: (client: { id: number; name: string; email: string }) => void;
     pathologies: Pathology[];
+    fromMembership: boolean;
 }
 
-export default function CreateClient({ pathologies }: Props) {
-    const { data, setData, post, processing, errors } = useForm({
+export default function CreateClientModal({
+    isOpen,
+    onClose,
+    onClientCreated,
+    pathologies,
+    fromMembership = false
+}: CreateClientModalProps) {
+    const { data, setData, post, processing, errors, reset } = useForm({
         name: '',
         email: '',
         phone_prefix: '0412',
@@ -53,6 +67,7 @@ export default function CreateClient({ pathologies }: Props) {
             id: number;
             notes: string;
         }>,
+        fromMembership
     });
 
     const [selectedPathologies, setSelectedPathologies] = useState<Array<{
@@ -63,7 +78,23 @@ export default function CreateClient({ pathologies }: Props) {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        post('/clients');
+        post('/clients', {
+            onSuccess: (response) => {
+                /* @ts-expect-error Inertia response type */
+                const newClient = response.props.flash?.client;
+                onClientCreated(newClient as { id: number; name: string; email: string });
+                handleClose();
+            },
+            onError: (errors) => {
+                console.log('Errores al crear cliente:', errors);
+            }
+        });
+    };
+
+    const handleClose = () => {
+        reset();
+        setSelectedPathologies([]);
+        onClose();
     };
 
     const addPathology = (pathologyId: number) => {
@@ -95,30 +126,18 @@ export default function CreateClient({ pathologies }: Props) {
         })));
     }, [selectedPathologies]);
 
-    const breadcrumbs = clientsBreadcrumbs.create();
-
     return (
-        <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Nuevo Cliente" />
-            <div className="flex h-full flex-1 flex-col gap-6 p-6">
-                <div className="space-y-6">
-                {/* Header */}
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
-                        <Link href="/clients">
-                            <Button variant="outline" size="sm">
-                                <ArrowLeft className="mr-2 h-4 w-4" />
-                                Volver
-                            </Button>
-                        </Link>
-                        <div>
-                            <h1 className="text-3xl font-bold tracking-tight">Nuevo Cliente</h1>
-                            <p className="text-muted-foreground">
-                                Registra un nuevo cliente en el gimnasio
-                            </p>
-                        </div>
-                    </div>
-                </div>
+        <Dialog open={isOpen} onOpenChange={handleClose}>
+            <DialogContent className=" max-h-[90vh] overflow-y-auto p-0">
+                <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                        <Plus className="h-5 w-5" />
+                        Crear Nuevo Cliente
+                    </DialogTitle>
+                    <DialogDescription>
+                        Completa la información del nuevo cliente. Los campos marcados con * son obligatorios.
+                    </DialogDescription>
+                </DialogHeader>
 
                 <form onSubmit={handleSubmit} className="space-y-6">
                     {/* Información Personal */}
@@ -144,18 +163,18 @@ export default function CreateClient({ pathologies }: Props) {
                                         size="sm"
                                         variant="outline"
                                         className="absolute -bottom-1 -right-1 h-8 w-8 rounded-full p-0"
-                                        onClick={() => document.getElementById('profile_photo')?.click()}
+                                        onClick={() => document.getElementById('modal_profile_photo')?.click()}
                                     >
                                         <Camera className="h-4 w-4" />
                                     </Button>
                                 </div>
                                 <div className="space-y-2">
-                                    <Label htmlFor="profile_photo">Foto de perfil</Label>
+                                    <Label htmlFor="modal_profile_photo">Foto de perfil</Label>
                                     <p className="text-sm text-muted-foreground">
                                         Sube una foto de perfil para el cliente (opcional)
                                     </p>
                                     <input
-                                        id="profile_photo"
+                                        id="modal_profile_photo"
                                         type="file"
                                         accept="image/*"
                                         className="hidden"
@@ -312,57 +331,7 @@ export default function CreateClient({ pathologies }: Props) {
                                         </SelectContent>
                                     </Select>
                                 </div>
-
-                                <div className="space-y-2">
-                                    <Label htmlFor="status">Estado</Label>
-                                    <Select value={data.status} onValueChange={(value) => setData('status', value)}>
-                                        <SelectTrigger>
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="active">Activo</SelectItem>
-                                            <SelectItem value="inactive">Inactivo</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
                             </div>
-
-                            <div className="space-y-2">
-                                <Label htmlFor="address">Dirección</Label>
-                                <div className="relative">
-                                    <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                                    <Input
-                                        id="address"
-                                        value={data.address}
-                                        onChange={(e) => setData('address', e.target.value)}
-                                        placeholder="Dirección completa"
-                                        className="pl-10"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="space-y-2">
-                                <Label htmlFor="notes">Notas</Label>
-                                <Textarea
-                                    id="notes"
-                                    value={data.notes}
-                                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setData('notes', e.target.value)}
-                                    placeholder="Información adicional sobre el cliente..."
-                                    rows={3}
-                                />
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    {/* Patologías */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <AlertCircle className="h-5 w-5" />
-                                Patologías (Opcional)
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
                             <div className="space-y-2">
                                 <Label>Seleccionar patologías</Label>
                                 <Select onValueChange={(value) => addPathology(parseInt(value))}>
@@ -410,24 +379,21 @@ export default function CreateClient({ pathologies }: Props) {
                                     ))}
                                 </div>
                             )}
+
                         </CardContent>
                     </Card>
-
-                    {/* Botones de acción */}
-                    <div className="flex items-center justify-end space-x-4">
-                        <Link href="/clients">
-                            <Button type="button" variant="outline">
-                                Cancelar
-                            </Button>
-                        </Link>
-                        <Button type="submit" disabled={processing}>
-                            <Save className="mr-2 h-4 w-4" />
-                            {processing ? 'Guardando...' : 'Guardar Cliente'}
-                        </Button>
-                    </div>
                 </form>
-                </div>
-            </div>
-        </AppLayout>
+
+                <DialogFooter>
+                    <Button type="button" variant="outline" onClick={handleClose}>
+                        Cancelar
+                    </Button>
+                    <Button type="submit" disabled={processing} onClick={handleSubmit}>
+                        <Save className="mr-2 h-4 w-4" />
+                        {processing ? 'Guardando...' : 'Guardar Cliente'}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     );
 }

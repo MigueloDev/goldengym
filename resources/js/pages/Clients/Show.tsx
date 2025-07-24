@@ -47,6 +47,7 @@ interface Client {
     name: string;
     email: string | null;
     phone: string | null;
+    identification_number: string | null;
     address: string | null;
     birth_date: string | null;
     gender: string | null;
@@ -181,6 +182,12 @@ export default function ShowClient({ client }: Props) {
                                                 <div className="flex items-center space-x-2">
                                                     <Phone className="h-4 w-4" />
                                                     <span>{client.phone}</span>
+                                                </div>
+                                            )}
+                                            {client.identification_number && (
+                                                <div className="flex items-center space-x-2">
+                                                    <FileText className="h-4 w-4" />
+                                                    <span>{client.identification_number}</span>
                                                 </div>
                                             )}
                                             {client.birth_date && (

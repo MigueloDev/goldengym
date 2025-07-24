@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Plus, X, ArrowLeft, Search } from 'lucide-react';
 import AppLayout from '@/layouts/app-layout';
 import { documentTemplatesBreadcrumbs } from '@/lib/breadcrumbs';
+import RichTextEditor from '@/components/rich-text-editor';
 
 interface TemplateKey {
   id: number;
@@ -18,6 +19,13 @@ interface TemplateKey {
 
 interface Props {
   templateKeys: TemplateKey[];
+}
+
+// Extender la interfaz Window para incluir la función de inserción
+declare global {
+  interface Window {
+    insertVariableAtCursor?: (variable: string) => void;
+  }
 }
 
 export default function DocumentTemplatesCreate({ templateKeys }: Props) {
@@ -49,8 +57,14 @@ export default function DocumentTemplatesCreate({ templateKeys }: Props) {
   };
 
   const insertVariable = (variable: string) => {
-    const placeholder = `[[${variable}]]`;
-    setData('content', data.content + placeholder);
+    // Usar la función global para insertar en el cursor actual
+    if (window.insertVariableAtCursor) {
+      window.insertVariableAtCursor(variable);
+    } else {
+      // Fallback: agregar al final del contenido
+      const placeholder = `[[${variable}]]`;
+      setData('content', data.content + placeholder);
+    }
   };
 
   const removeVariable = (variable: string) => {
@@ -120,16 +134,11 @@ export default function DocumentTemplatesCreate({ templateKeys }: Props) {
 
                     <div className="space-y-2">
                       <Label htmlFor="content">Contenido del Documento</Label>
-                      <div className="border rounded-md">
-                        <textarea
-                          id="content"
-                          value={data.content}
-                          onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setData('content', e.target.value)}
-                          placeholder="Escribe el contenido de tu documento. Usa las variables disponibles para personalizar el contenido."
-                          rows={15}
-                          className="w-full p-3 border-0 resize-none focus:outline-none font-mono"
-                        />
-                      </div>
+                      <RichTextEditor
+                        value={data.content}
+                        onChange={(value) => setData('content', value)}
+                        placeholder="Escribe el contenido de tu documento. Usa las variables disponibles para personalizar el contenido."
+                      />
                       <p className="text-sm text-muted-foreground">
                         Usa las variables disponibles en el panel derecho para personalizar el contenido.
                       </p>

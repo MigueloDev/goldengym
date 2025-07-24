@@ -262,6 +262,7 @@ export default function MembershipsIndex({ memberships, filters, stats }: Props)
                   <TableHead>Plan</TableHead>
                   <TableHead>Estado</TableHead>
                   <TableHead>Período</TableHead>
+                  <TableHead>Precio Plan Pagado</TableHead>
                   <TableHead>Monto</TableHead>
                   <TableHead>Pagos</TableHead>
                   <TableHead className="text-right">Acciones</TableHead>
@@ -282,6 +283,9 @@ export default function MembershipsIndex({ memberships, filters, stats }: Props)
                         <div>Inicio: {formatDate(membership.start_date)}</div>
                         <div>Fin: {formatDate(membership.end_date)}</div>
                       </div>
+                    </TableCell>
+                    <TableCell>
+                      {formatCurrency(membership.plan_price_paid || '1', 'usd')}
                     </TableCell>
                     <TableCell>
                       {

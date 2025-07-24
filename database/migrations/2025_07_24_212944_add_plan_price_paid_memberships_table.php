@@ -11,8 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('document_templates', function (Blueprint $table) {
-            $table->dropColumn('description');
+        Schema::table('memberships', function (Blueprint $table) {
+            $table->decimal('plan_price_paid', 10, 2)->nullable();
         });
     }
 
@@ -21,8 +21,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('document_templates', function (Blueprint $table) {
-            $table->text('description')->nullable();
+        Schema::table('memberships', function (Blueprint $table) {
+            $table->dropColumn('plan_price_paid');
         });
     }
 };

@@ -4,8 +4,12 @@ import { AppSidebar } from '@/components/app-sidebar';
 import { AppSidebarHeader } from '@/components/app-sidebar-header';
 import { type BreadcrumbItem } from '@/types';
 import { type PropsWithChildren } from 'react';
+import { useInertiaErrors } from '@/hooks/use-inertia-errors';
 
 export default function AppSidebarLayout({ children, breadcrumbs = [] }: PropsWithChildren<{ breadcrumbs?: BreadcrumbItem[] }>) {
+    // Capturar errores globales de Inertia.js
+    useInertiaErrors();
+
     return (
         <AppShell variant="sidebar">
             <AppSidebar />

@@ -164,3 +164,6 @@
         @apply bg-background text-foreground;
     }
 }
+
+/* Importar estilos del editor TipTap */
+@import './tiptap.css';

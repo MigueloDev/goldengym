@@ -1,16 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { FileText, Download, Loader2 } from 'lucide-react';
+import { router, usePage } from '@inertiajs/react';
+import { useToast } from '@/components/ui/toast';
+import { PageProps } from '@inertiajs/core';
 
 interface DocumentTemplate {
   id: number;
   name: string;
   description: string | null;
   status: 'active' | 'inactive';
+}
+
+interface FlashProps {
+  success?: string;
+  error?: string;
+  download_url?: string;
+  file_name?: string;
 }
 
 interface Props {
@@ -24,48 +34,48 @@ export default function GenerateDocumentModal({ clientId, clientName, templates,
   const [selectedTemplate, setSelectedTemplate] = useState<number | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
+  const { addToast } = useToast();
 
   const handleGenerate = async () => {
     if (!selectedTemplate) return;
 
     setIsGenerating(true);
 
-    try {
-      const response = await fetch(route('document-templates.generate'), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
-        },
-        body: JSON.stringify({
-          client_id: clientId,
-          template_id: selectedTemplate,
-        }),
-      });
+    router.post(route('document-templates.generate'), {
+      client_id: clientId,
+      template_id: selectedTemplate,
+    }, {
+      onSuccess: (response) => {
+        /* @ts-expect-error Inertia response */
+        if (response.props.flash.success) {
+          const link = document.createElement('a');
+          /* @ts-expect-error Inertia response */
+          link.href = response.props.flash.download_url as string;
+          link.target = '_blank';
+          link.click();
+          addToast({
+            type: 'success',
+            title: 'Documento generado exitosamente',
+            message: 'El archivo se ha descargado automáticamente',
+          });
 
-      const result = await response.json();
-
-      if (result.success) {
-        // Descargar el archivo
-        const link = document.createElement('a');
-        link.href = result.download_url;
-        link.download = result.file.name;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-
-        // Cerrar modal
-        setIsOpen(false);
-        setSelectedTemplate(null);
-      } else {
-        alert('Error al generar el documento');
+          setIsOpen(false);
+          setSelectedTemplate(null);
+        }
+      },
+      onError: (errors) => {
+        console.error('Error:', errors);
+        const errorMessages = Object.values(errors).flat();
+        addToast({
+          type: 'error',
+          title: 'Error al generar el documento',
+          message: errorMessages.length > 0 ? errorMessages.join(', ') : 'Ha ocurrido un error inesperado',
+        });
+      },
+      onFinish: () => {
+        setIsGenerating(false);
       }
-    } catch (error) {
-      console.error('Error:', error);
-      alert('Error al generar el documento');
-    } finally {
-      setIsGenerating(false);
-    }
+    });
   };
 
   const activeTemplates = templates.filter(template => template.status === 'active');
