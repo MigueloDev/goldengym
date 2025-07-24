@@ -236,19 +236,47 @@ class MembershipController extends Controller
         $validated = $request->validate([
             'plan_id' => 'required|exists:plans,id',
             'payment_currency' => 'required|in:local,usd',
-            'payment_methods_json' => 'required|json',
+            'payment_methods_json' => 'nullable|json',
+            'payment_methods' => 'nullable|array',
             'notes' => 'nullable|string|max:1000',
             'payment_evidences.*' => 'nullable|file|mimes:jpeg,png,jpg,gif,pdf|max:5120',
+            'exchange_rate' => 'nullable|numeric',
         ]);
 
-        $paymentMethods = json_decode($validated['payment_methods_json'], true);
+        // Procesar métodos de pago
+        if ($request->has('payment_methods_json') && !empty($validated['payment_methods_json'])) {
+            $paymentMethods = json_decode($validated['payment_methods_json'], true);
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                return back()->withErrors(['payment_methods' => 'Error al procesar los métodos de pago.']);
+            }
+        } elseif ($request->has('payment_methods')) {
+            $paymentMethods = $validated['payment_methods'];
+        } else {
+            return back()->withErrors(['payment_methods' => 'Se requieren métodos de pago.']);
+        }
 
         $totalAmount = 0;
         foreach ($paymentMethods as $method) {
-            if (!isset($method['method']) || !isset($method['amount']) || empty($method['amount'])) {
+            if (!isset($method['method'])) {
+                return back()->withErrors(['payment_methods' => 'Todos los métodos de pago deben tener un tipo válido.']);
+            }
+            $amount = null;
+            if (isset($method['type']) && $method['type'] === 'usd' && isset($method['amount_usd']) && !empty($method['amount_usd'])) {
+                $amount = floatval($method['amount_usd']);
+            } elseif (isset($method['type']) && $method['type'] === 'bs' && isset($method['amount_bs']) && !empty($method['amount_bs'])) {
+                if (!$request->filled('exchange_rate')) {
+                    return back()->withErrors(['exchange_rate' => 'Se requiere la tasa de cambio para el pago en bolívares.']);
+                }
+                $amount = floatval($method['amount_bs']) * floatval($validated['exchange_rate']);
+            } elseif (isset($method['amount']) && !empty($method['amount'])) {
+                // Fallback para el formato anterior
+                $amount = floatval($method['amount']);
+            }
+
+            if ($amount === null || $amount <= 0) {
                 return back()->withErrors(['payment_methods' => 'Todos los métodos de pago deben tener un monto válido.']);
             }
-            $totalAmount += floatval($method['amount']);
+            $totalAmount += $amount;
         }
 
         if ($totalAmount <= 0) {
@@ -269,15 +297,26 @@ class MembershipController extends Controller
 
         $payments = [];
         foreach ($paymentMethods as $method) {
+            $amount = null;
+            if (isset($method['type']) && $method['type'] === 'usd' && isset($method['amount_usd']) && !empty($method['amount_usd'])) {
+                $amount = floatval($method['amount_usd']);
+            } elseif (isset($method['type']) && $method['type'] === 'bs' && isset($method['amount_bs']) && !empty($method['amount_bs'])) {
+                $amount = floatval($method['amount_bs']);
+            } elseif (isset($method['amount']) && !empty($method['amount'])) {
+                // Fallback para el formato anterior
+                $amount = floatval($method['amount']);
+            }
+
             $payment = Payment::create([
                 'membership_id' => $membership->id,
-                'amount' => floatval($method['amount']),
-                'currency' => $validated['payment_currency'],
+                'amount' => $amount,
+                'currency' => isset($method['type']) ? ($method['type'] === 'usd' ? 'usd' : 'local') : $validated['payment_currency'],
                 'payment_date' => now(),
                 'payment_method' => $method['method'],
                 'reference' => $method['reference'] ?? 'Renovación rápida',
                 'notes' => $method['notes'] ?? null,
                 'registered_by' => auth()->id(),
+                'exchange_rate' => $validated['exchange_rate'] ?? 1,
             ]);
 
             $payments[] = $payment;

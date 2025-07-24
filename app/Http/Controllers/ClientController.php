@@ -309,7 +309,7 @@ class ClientController extends Controller
             }
 
             $file = $request->file('profile_photo');
-            $disk = env('APP_ENV') === 'production' ? 's3' : 'public';
+            $disk = app()->environment('testing') ? 'local' : (env('APP_ENV') === 'production' ? 's3' : 'public');
             $path = $file->store('clients/profile-photos', $disk);
             $client->files()->create([
                 'name' => $file->getClientOriginalName(),

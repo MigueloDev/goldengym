@@ -54,8 +54,11 @@ interface Membership {
 interface PaymentMethod {
   method: 'cash_usd' | 'cash_local' | 'card_usd' | 'card_local' | 'transfer_usd' | 'transfer_local' | 'crypto' | 'other';
   amount: string;
+  amount_usd?: string; // Monto en USD
+  amount_bs?: string;  // Monto en Bolívares
   reference: string;
   notes: string;
+  type: 'usd' | 'bs';
 }
 
 interface Props {
@@ -81,7 +84,7 @@ export default function CreatePayment({ membership, membershipsWithDebt }: Props
   const [willRenew, setWillRenew] = useState(false);
   const [newEndDate, setNewEndDate] = useState<string>('');
       const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([
-        { method: 'cash_usd', amount: '', reference: '', notes: '' }
+        { method: 'cash_usd', amount: '', amount_usd: '', amount_bs: '', type: 'usd', reference: '', notes: '' }
     ]);
 
     // Estado para evidencias de pago
@@ -90,7 +93,14 @@ export default function CreatePayment({ membership, membershipsWithDebt }: Props
 
   // Calcular total de todos los métodos de pago
   const totalAmount = paymentMethods.reduce((sum, method) => {
-    return sum + (parseFloat(method.amount) || 0);
+    if (method.type === 'usd' && method.amount_usd) {
+      return sum + (parseFloat(method.amount_usd) || 0);
+    } else if (method.type === 'bs' && method.amount_bs) {
+      // Convertir a USD usando la tasa de cambio
+      const exchangeRate = parseFloat(data.exchange_rate) || 1;
+      return sum + ((parseFloat(method.amount_bs) || 0) / exchangeRate);
+    }
+    return sum + (parseFloat(method.amount) || 0); // Fallback
   }, 0);
 
   // Calcular la deuda basada en el precio seleccionado
@@ -160,7 +170,15 @@ export default function CreatePayment({ membership, membershipsWithDebt }: Props
   };
 
   const addPaymentMethod = () => {
-    const newMethods = [...paymentMethods, { method: 'cash_usd' as const, amount: '', reference: '', notes: '' }];
+    const newMethods = [...paymentMethods, {
+      method: 'cash_usd' as const,
+      amount: '',
+      amount_usd: '',
+      amount_bs: '',
+      type: 'usd' as const,
+      reference: '',
+      notes: ''
+    }];
     setPaymentMethods(newMethods);
     setData('payment_methods_json', JSON.stringify(newMethods));
   };
@@ -175,7 +193,11 @@ export default function CreatePayment({ membership, membershipsWithDebt }: Props
 
   const updatePaymentMethod = (index: number, field: keyof PaymentMethod, value: string) => {
     const newMethods = [...paymentMethods];
-    newMethods[index] = { ...newMethods[index], [field]: value };
+    const typeObject: { type?: 'usd' | 'bs' } = {};
+    if (field === 'method') {
+      typeObject.type = value.includes('usd') || value === 'crypto' ? 'usd' : 'bs';
+    }
+    newMethods[index] = { ...newMethods[index], [field]: value, ...typeObject };
     setPaymentMethods(newMethods);
     setData('payment_methods_json', JSON.stringify(newMethods));
   };
@@ -519,13 +541,13 @@ export default function CreatePayment({ membership, membershipsWithDebt }: Props
                         </div>
 
                         <div className="space-y-2">
-                          <Label>Monto</Label>
+                          <Label>Monto {method.type === 'usd' ? 'USD' : 'Bs'}</Label>
                           <Input
                             type="number"
                             step="0.01"
                             min="0"
-                            value={method.amount}
-                            onChange={(e) => updatePaymentMethod(index, 'amount', e.target.value)}
+                            value={method.type === 'usd' ? method.amount_usd || '' : method.amount_bs || ''}
+                            onChange={(e) => updatePaymentMethod(index, method.type === 'usd' ? 'amount_usd' : 'amount_bs', e.target.value)}
                             placeholder="0.00"
                           />
                         </div>
