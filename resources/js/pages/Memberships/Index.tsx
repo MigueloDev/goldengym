@@ -11,7 +11,6 @@ import { Users, CheckCircle, XCircle, Clock, Plus, Search, X, RefreshCw, Eye, Ed
 import AppLayout from '@/layouts/app-layout';
 import { membershipsBreadcrumbs } from '@/lib/breadcrumbs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Payment } from '@/types/payment';
 
 interface Membership {
   id: number;
@@ -36,7 +35,8 @@ interface Membership {
     id: number;
     amount: number;
     currency: 'local' | 'usd';
-  };
+    method_color: string
+  }[];
 }
 
 interface Filters {

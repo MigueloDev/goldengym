@@ -53,8 +53,13 @@ class PaymentController extends Controller
                 'total' => Payment::count(),
                 'total_amount_local' => Payment::where('currency', 'local')->sum('amount'),
                 'total_amount_usd' => Payment::where('currency', 'usd')->sum('amount'),
-                'this_month' => Payment::whereMonth('payment_date', now()->month)
+                'this_month_local' => Payment::whereMonth('payment_date', now()->month)
                     ->whereYear('payment_date', now()->year)
+                    ->where('currency', 'local')
+                    ->sum('amount'),
+                'this_month_usd' => Payment::whereMonth('payment_date', now()->month)
+                    ->whereYear('payment_date', now()->year)
+                    ->where('currency', 'usd')
                     ->sum('amount'),
             ]
         ]);

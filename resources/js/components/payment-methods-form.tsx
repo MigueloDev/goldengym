@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -67,16 +67,6 @@ export default function PaymentMethodsForm({
     return sum.plus(new Decimal(method.amount_bs || 0));
   }, new Decimal(0));
 
-  // Calcular total de todos los métodos de pago usando Decimal.js
-  const allPaymentsEquivalentToBs = paymentMethods.reduce((sum, method) => {
-    return sum.plus(new Decimal(method.amount_bs || 0).times(new Decimal(exchangeRate || 1)));
-  }, new Decimal(0));
-
-  const allPaymentAmountUsd = paymentMethods.reduce((sum, method) => {
-    return sum.plus(new Decimal(method.amount_usd || 0));
-  }, new Decimal(0));
-
-  // Calcular conversión cuando se paga en bolívares
   const calculateConversion = () => {
     if (paymentCurrency === 'local' && targetAmount > 0) {
       const rate = new Decimal(exchangeRate || 0);
@@ -95,13 +85,12 @@ export default function PaymentMethodsForm({
   const overpaymentUSD = remainingUSD.lessThan(0) ? remainingUSD.abs() : new Decimal(0);
   const overpaymentBS = remainingBS.lessThan(0) ? remainingBS.abs() : new Decimal(0);
 
-  // Determinar el color del restante basado en el porcentaje pagado
   const getRemainingColor = (remaining: Decimal, total: Decimal) => {
-    if (remaining.lessThan(0)) return 'text-red-600'; // Exceso - rojo
-    if (remaining.equals(0)) return 'text-green-600'; // Completo - verde
+    if (remaining.lessThan(0)) return 'text-red-600';
+    if (remaining.equals(0)) return 'text-green-600';
     const percentagePaid = total.greaterThan(0) ? total.minus(remaining).dividedBy(total).times(100) : new Decimal(0);
-    if (percentagePaid.greaterThanOrEqualTo(80)) return 'text-orange-600'; // Casi completo - naranja
-    return 'text-red-600'; // Pendiente - rojo
+    if (percentagePaid.greaterThanOrEqualTo(80)) return 'text-orange-600';
+    return 'text-red-600';
   };
 
   const remainingUSDColor = getRemainingColor(remainingUSD, new Decimal(targetAmount));
@@ -245,9 +234,9 @@ export default function PaymentMethodsForm({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-0">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
-            <Label htmlFor="payment_currency">Moneda *</Label>
+            <Label htmlFor="payment_currency">Moneda (Monto a pagar del plan) *</Label>
             <Select value={paymentCurrency} onValueChange={onPaymentCurrencyChange}>
               <SelectTrigger>
                 <SelectValue />
@@ -278,131 +267,8 @@ export default function PaymentMethodsForm({
               {errors.exchange_rate && <p className="text-sm text-red-600">{errors.exchange_rate}</p>}
             </div>
           )}
-        </div>
-
-        {/* Información de conversión cuando hay tasa válida */}
-{/*         {targetAmount > 0 && exchangeRate && new Decimal(exchangeRate).greaterThan(0) && (
-          <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span>Monto objetivo en USD:</span>
-                <span className="font-medium">{formatCurrency(targetAmount, 'usd')}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Tasa de cambio:</span>
-                <span className="font-medium">Bs {new Decimal(exchangeRate).toFixed(2)}/USD</span>
-              </div>
-              {paymentCurrency === 'local' && convertedAmount.greaterThan(0) && (
-                <div className="flex justify-between">
-                  <span>Monto equivalente (A pagar) en Bs:</span>
-                  <span className="font-bold text-xl text-blue-700">{formatCurrency(convertedAmount, 'local')}</span>
-                </div>
-              )}
-              <div className="text-xs text-blue-600 mt-2">
-                💡 Los métodos de pago en Bs se convertirán automáticamente a USD para el cálculo
-              </div>
-            </div>
-          </div>
-        )} */}
-
-        {/* Métodos de Pago */}
-        <div className="space-y-4 mt-2">
-          <div className="flex items-center justify-between">
-            <Label>Métodos de Pago</Label>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={addPaymentMethod}
-            >
-              <Icon iconNode={Plus} className="mr-2 h-4 w-4" />
-              Agregar Método
-            </Button>
-          </div>
-
-          {paymentMethods.map((method, index) => (
-            <div key={index} className="py-1 px-4 border rounded-lg space-y-0">
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>Método de pago</Label>
-                  <Select
-                    value={method.method}
-                    onValueChange={(value) => updatePaymentMethod(index, 'method', value as PaymentMethod['method'])}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder={getMethodLabel(method.method)} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="cash_usd">Efectivo USD</SelectItem>
-                      <SelectItem value="cash_local">Efectivo VES</SelectItem>
-                      <SelectItem value="card_usd">Tarjeta USD</SelectItem>
-                      <SelectItem value="card_local">Tarjeta VES</SelectItem>
-                      <SelectItem value="transfer_usd">Transferencia USD</SelectItem>
-                      <SelectItem value="transfer_local">Transferencia VES</SelectItem>
-                      <SelectItem value="crypto">Crypto</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="grid gap-4 md:grid-cols-3">
-                  <div className="space-y-2">
-                    <Label>Monto {method.type === 'usd' ? 'USD' : 'Bs'}</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={method.type === 'usd' ? method.amount_usd || '' : method.amount_bs || ''}
-                      onChange={(e) => updateDualAmounts(index, method.type === 'usd' ? 'amount_usd' : 'amount_bs', e.target.value)}
-                      placeholder="0.00"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                  <Label>Referencia</Label>
-                    <Input
-                      value={method.reference}
-                      onChange={(e) => updatePaymentMethod(index, 'reference', e.target.value)}
-                      placeholder="Número de referencia..."
-                    />
-                  </div>
-                  {paymentMethods.length > 1 && (
-                    <div className="space-y-2 mt-6">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removePaymentMethod(index)}
-                      >
-                        <Icon iconNode={X} className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          ))}
-
-          {/* Total y Restantes */}
-          <div className="p-4 bg-muted/50 rounded-lg">
-              <div className="space-y-3">
-                {/* Totales */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold">Total USD:</span>
-                    <span className="text-xl font-bold text-green-600">
-                      {formatCurrency(totalAmountUSD, 'usd')}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold">Total Pagado en Bs:</span>
-                    <span className="text-xl font-bold text-green-600">
-                      {formatCurrency(totalAmountBS, 'local')}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Restantes */}
-                {targetAmount > 0 && (
+          <div className="grid grid-cols-1 col-span-2">
+          {targetAmount > 0 && (
                   <div className="border-t pt-3 space-y-3">
                     {/* Barra de progreso */}
                     <div className="space-y-1">
@@ -419,7 +285,6 @@ export default function PaymentMethodsForm({
                         ></div>
                       </div>
                     </div>
-
                     {/* Botones de pagar restante */}
                     {!remainingUSD.equals(0) && (
                       <div className="grid grid-cols-2 gap-2">
@@ -466,7 +331,7 @@ export default function PaymentMethodsForm({
                                 amount: '',
                                 amount_usd: '',
                                 amount_bs: remainingBS.abs().toString(),
-                                reference: 'Pago restante',
+                                reference: '',
                                 notes: ''
                               };
                               onPaymentMethodsChange([...paymentMethods, newMethod]);
@@ -486,24 +351,119 @@ export default function PaymentMethodsForm({
                     )}
 
                     {/* Restantes/Exceso (texto informativo) */}
-                    <div className="space-y-1 text-xs text-muted-foreground">
+                    <div className="space-y-1 text-sm text-muted-foreground">
                       <div className="flex items-center justify-between">
                         <span>Restante USD:</span>
-                        <span className={remainingUSDColor}>
+                        <span className={`${remainingUSDColor} font-bold`}>
                           {remainingUSD.lessThan(0) ? '+' : ''}{formatCurrency(remainingUSD.abs(), 'usd')}
                         </span>
                       </div>
-                      {convertedAmount.greaterThan(0) && (
-                        <div className="flex items-center justify-between">
-                          <span>Restante Bs:</span>
-                          <span className={remainingBSColor}>
-                            {remainingBS.lessThan(0) ? '+' : ''}{formatCurrency(remainingBS.abs(), 'local')}
-                          </span>
-                        </div>
-                      )}
+                      <div className="flex items-center justify-between">
+                        <span>Restante Bs:</span>
+                        <span className={`${remainingBSColor} font-bold`}>
+                          {remainingBS.lessThan(0) ? '+' : ''}{formatCurrency(remainingBS.abs(), 'local')}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 )}
+          </div>
+        </div>
+        <div className="space-y-4 mt-2">
+          <div className="grid grid-cols-2 gap-1 mb-2">
+            <Label>Métodos de Pago</Label>
+          </div>
+          {paymentMethods.map((method, index) => (
+            <div key={index} className="py-1 px-4 border rounded-lg space-y-0">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Método de pago</Label>
+                  <Select
+                    value={method.method}
+                    onValueChange={(value) => updatePaymentMethod(index, 'method', value as PaymentMethod['method'])}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={getMethodLabel(method.method)} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="cash_usd">Efectivo USD</SelectItem>
+                      <SelectItem value="cash_local">Efectivo VES</SelectItem>
+                      <SelectItem value="card_usd">Tarjeta USD</SelectItem>
+                      <SelectItem value="card_local">Tarjeta VES</SelectItem>
+                      <SelectItem value="transfer_usd">Transferencia USD</SelectItem>
+                      <SelectItem value="transfer_local">Transferencia VES</SelectItem>
+                      <SelectItem value="crypto">Crypto</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-4">
+                  <div className="space-y-2">
+                    <Label>Monto {method.type === 'usd' ? 'USD' : 'Bs'}</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={method.type === 'usd' ? method.amount_usd || '' : method.amount_bs || ''}
+                      onChange={(e) => updateDualAmounts(index, method.type === 'usd' ? 'amount_usd' : 'amount_bs', e.target.value)}
+                      placeholder="0.00"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                  <Label>Referencia</Label>
+                    <Input
+                      value={method.reference}
+                      onChange={(e) => updatePaymentMethod(index, 'reference', e.target.value)}
+                      placeholder="Número de referencia..."
+                    />
+                  </div>
+                  {paymentMethods.length > 1 && (
+                    <div className="space-y-2 mt-6">
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => removePaymentMethod(index)}
+                      >
+                        <Icon iconNode={X} className="h-4 w-4" />
+                        Eliminar
+                      </Button>
+                    </div>
+                  )}
+                  <div className="space-y-2 mt-6">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={addPaymentMethod}
+                    >
+                      <Icon iconNode={Plus} className="mr-2 h-4 w-4" />
+                      Agregar Método
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+
+          {/* Total y Restantes */}
+          <div className="p-4 bg-muted/50 rounded-lg">
+              <div className="space-y-3">
+                {/* Totales */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold">Total USD:</span>
+                    <span className="text-xl font-bold text-green-600">
+                      {formatCurrency(totalAmountUSD, 'usd')}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold">Total Pagado en Bs:</span>
+                    <span className="text-xl font-bold text-green-600">
+                      {formatCurrency(totalAmountBS, 'local')}
+                    </span>
+                  </div>
+                </div>
               </div>
           </div>
         </div>

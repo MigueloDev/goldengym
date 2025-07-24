@@ -173,7 +173,7 @@ export default function QuickRegister({ plans, clients }: Props) {
                   {errors.client_id && <p className="text-sm text-red-600">{errors.client_id}</p>}
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="new_client.name">Nombre *</Label>
                     <Input
@@ -260,35 +260,6 @@ export default function QuickRegister({ plans, clients }: Props) {
             exchangeRate={data.exchange_rate}
             onExchangeRateChange={(rate) => setData('exchange_rate', rate)}
           />
-          {selectedPlan && (
-            <Card className="gap-0 py-2">
-              <CardHeader className="pb-0">
-                <CardTitle className="text-lg font-bold mb-0 py-0">Resumen</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span>Plan:</span>
-                    <span className="font-medium">{selectedPlan.name}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Duración:</span>
-                    <span>{selectedPlan.duration} {selectedPlan.duration_type}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Precio del plan:</span>
-                    <span>${selectedPlan.price}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Monto a pagar:</span>
-                    <span className="font-bold">
-                      {data.payment_currency === 'usd' ? '$' : 'Bs'}{paymentMethods.reduce((sum, method) => sum + (parseFloat(method.amount) || 0), 0).toLocaleString()}
-                    </span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
 
           {/* Submit */}
           <div className="flex justify-end gap-4">

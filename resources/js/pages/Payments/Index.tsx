@@ -76,7 +76,8 @@ interface Props {
         total: number;
         total_amount_local: number;
         total_amount_usd: number;
-        this_month: number;
+        this_month_local: number;
+        this_month_usd: number;
     };
 }
 
@@ -144,7 +145,7 @@ export default function PaymentsIndex({ payments, filters, stats }: Props) {
                 </div>
 
                 {/* Stats Cards */}
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-5">
                     <Card className='gap-1 h-18 py-2 border-golden/20 bg-golden/5'>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0">
                             <CardTitle className="text-sm font-medium">Total Pagos</CardTitle>
@@ -156,7 +157,7 @@ export default function PaymentsIndex({ payments, filters, stats }: Props) {
                     </Card>
                     <Card className='gap-1 h-18 py-2 border-golden/20 bg-golden/5'>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0">
-                            <CardTitle className="text-sm font-medium">Total VES</CardTitle>
+                            <CardTitle className="text-sm font-medium">Total Bs</CardTitle>
                             <DollarSign className="h-4 w-4 text-green-600" />
                         </CardHeader>
                         <CardContent>
@@ -178,12 +179,23 @@ export default function PaymentsIndex({ payments, filters, stats }: Props) {
                     </Card>
                     <Card className='gap-1 h-18 py-2 border-golden/20 bg-golden/5'>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0">
-                            <CardTitle className="text-sm font-medium">Este Mes</CardTitle>
+                            <CardTitle className="text-sm font-medium">Total Bs Mes</CardTitle>
                             <Calendar className="h-4 w-4 text-yellow-600" />
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold text-yellow-600">
-                                {formatCurrency(stats.this_month, 'local')}
+                                {formatCurrency(stats.this_month_local, 'local')}
+                            </div>
+                        </CardContent>
+                    </Card>
+                    <Card className='gap-1 h-18 py-2 border-golden/20 bg-golden/5'>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0">
+                            <CardTitle className="text-sm font-medium">Total USD Mes</CardTitle>
+                            <Calendar className="h-4 w-4 text-yellow-600" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold text-yellow-600">
+                                {formatCurrency(stats.this_month_usd, 'usd')}
                             </div>
                         </CardContent>
                     </Card>
