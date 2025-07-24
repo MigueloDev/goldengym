@@ -72,95 +72,134 @@ class MembershipController extends Controller
     {
         DB::beginTransaction();
         try {
-        $validationRules = [
-            'plan_id' => 'required|exists:plans,id',
-            'start_date' => 'required|date',
-            'notes' => 'nullable|string|max:1000',
-            'payment_currency' => 'required|in:local,usd',
-            'payment_methods_json' => 'required|json',
-            'payment_evidences.*' => 'nullable|file|mimes:jpeg,png,jpg,gif,pdf|max:5120',
-        ];
+            $validationRules = [
+                'plan_id' => 'required|exists:plans,id',
+                'start_date' => 'required|date',
+                'notes' => 'nullable|string|max:1000',
+                'payment_currency' => 'required|in:local,usd',
+                'payment_methods_json' => 'nullable|json',
+                'payment_methods' => 'nullable|array',
+                'payment_evidences.*' => 'nullable|file|mimes:jpeg,png,jpg,gif,pdf|max:5120',
+            ];
 
-        if ($request->filled('client_id')) {
-            $validationRules['client_id'] = 'required|exists:clients,id';
-        } else {
-            $validationRules['new_client'] = 'required|array';
-            $validationRules['new_client.name'] = 'required|string|max:255';
-            $validationRules['new_client.email'] = 'nullable|email|max:255';
-            $validationRules['new_client.phone'] = 'nullable|string|max:20';
-        }
-
-        $validated = $request->validate($validationRules);
-
-        $paymentMethods = json_decode($validated['payment_methods_json'], true);
-
-        $totalAmount = 0;
-        foreach ($paymentMethods as $method) {
-            if (!isset($method['method']) || !isset($method['amount']) || empty($method['amount'])) {
-                return back()->withErrors(['payment_methods' => 'Todos los métodos de pago deben tener un monto válido.']);
+            if ($request->filled('client_id')) {
+                $validationRules['client_id'] = 'required|exists:clients,id';
+            } else {
+                $validationRules['new_client'] = 'required|array';
+                $validationRules['new_client.name'] = 'required|string|max:255';
+                $validationRules['new_client.email'] = 'nullable|email|max:255';
+                $validationRules['new_client.phone'] = 'nullable|string|max:20';
             }
-            $totalAmount += floatval($method['amount']);
-        }
+            $validated = $request->validate($validationRules);
 
-        if ($totalAmount <= 0) {
-            return back()->withErrors(['payment_methods' => 'El monto total debe ser mayor a 0.']);
-        }
+            // Debug: Agregar un error de prueba temporal
+            if ($request->has('debug_error')) {
+                return back()->withErrors([
+                    'plan_id' => 'Error de prueba - Plan inválido',
+                    'payment_methods' => 'Error de prueba - Métodos de pago inválidos',
+                    'new_client.name' => 'Error de prueba - Nombre requerido'
+                ]);
+            }
+            if ($request->has('payment_methods_json') && !empty($validated['payment_methods_json'])) {
+                $paymentMethods = json_decode($validated['payment_methods_json'], true);
+                if (json_last_error() !== JSON_ERROR_NONE) {
+                    return back()->withErrors(['payment_methods' => 'Error al procesar los métodos de pago.']);
+                }
+            } elseif ($request->has('payment_methods')) {
+                $paymentMethods = $validated['payment_methods'];
+            } else {
+                return back()->withErrors(['payment_methods' => 'Se requieren métodos de pago.']);
+            }
 
-        if ($validated['client_id']) {
-            $client = Client::find($validated['client_id']);
-        } else {
-            $client = Client::create($validated['new_client']);
-        }
+            $totalAmount = 0;
+            foreach ($paymentMethods as $method) {
+                if (!isset($method['method'])) {
+                    return back()->withErrors(['payment_methods' => 'Todos los métodos de pago deben tener un tipo válido.']);
+                }
+                $amount = null;
+                if (isset($method['amount_usd']) && !empty($method['amount_usd'])) {
+                    $amount = floatval($method['amount_usd']);
+                } elseif (isset($method['amount']) && !empty($method['amount'])) {
+                    $amount = floatval($method['amount']);
+                }
+                if ($amount === null || $amount <= 0) {
+                    return back()->withErrors(['payment_methods' => 'Todos los métodos de pago deben tener un monto válido.']);
+                }
+                $totalAmount += $amount;
+            }
 
-        if (Membership::hasActiveMembership($client->id)) {
-            return back()->withErrors([
-                'client_id' => 'Este cliente ya tiene una membresía activa. No se puede registrar una nueva membresía mientras tenga una activa.'
-            ]);
-        }
+            if ($totalAmount <= 0) {
+                return back()->withErrors(['payment_methods' => 'El monto total debe ser mayor a 0.']);
+            }
 
-        $plan = Plan::find($validated['plan_id']);
-
-        $membership = Membership::create([
-            'client_id' => $client->id,
-            'plan_id' => $plan->id,
-            'start_date' => $validated['start_date'],
-            'end_date' => $plan->calculateEndDate($validated['start_date']),
-            'status' => 'active',
-            'amount_paid' => $totalAmount,
-            'currency' => $validated['payment_currency'],
-            'registered_by' => auth()->id(),
-            'notes' => $validated['notes'],
-        ]);
-
-        $payments = [];
-        foreach ($paymentMethods as $method) {
-            $payment = Payment::create([
-                'membership_id' => $membership->id,
-                'amount' => floatval($method['amount']),
+            if (isset($validated['client_id'])) {
+                $client = Client::find($validated['client_id']);
+                if (!$client) {
+                    return back()->withErrors(['client_id' => 'Cliente no encontrado.']);
+                }
+            } else {
+                $client = Client::create($validated['new_client']);
+            }
+            if (Membership::hasActiveMembership($client->id)) {
+                return back()->withErrors([
+                    'client_id' => 'Este cliente ya tiene una membresía activa. No se puede registrar una nueva membresía mientras tenga una activa.'
+                ]);
+            }
+            $plan = Plan::find($validated['plan_id']);
+            if (!$plan) {
+                return back()->withErrors(['plan_id' => 'Plan no encontrado.']);
+            }
+            $membership = Membership::create([
+                'client_id' => $client->id,
+                'plan_id' => $plan->id,
+                'start_date' => $validated['start_date'],
+                'end_date' => $plan->calculateEndDate($validated['start_date']),
+                'status' => 'active',
+                'amount_paid' => $totalAmount,
                 'currency' => $validated['payment_currency'],
-                'payment_date' => now(),
-                'payment_method' => $method['method'],
-                'reference' => $method['reference'] ?? 'Registro rápido',
-                'notes' => $method['notes'] ?? null,
                 'registered_by' => auth()->id(),
+                'notes' => $validated['notes'],
             ]);
 
-            $payments[] = $payment;
-        }
+            $payments = [];
+            foreach ($paymentMethods as $method) {
+                $amount = null;
+                if (isset($method['amount_usd']) && !empty($method['amount_usd'])) {
+                    $amount = floatval($method['amount_usd']);
+                } elseif (isset($method['amount']) && !empty($method['amount'])) {
+                    $amount = floatval($method['amount']);
+                }
 
-        if ($request->hasFile('payment_evidences') && !empty($payments)) {
-            foreach ($request->file('payment_evidences') as $evidence) {
-                $payments[0]->addPaymentEvidence($evidence);
+                $payment = Payment::create([
+                    'membership_id' => $membership->id,
+                    'amount' => $amount,
+                    'currency' => $validated['type'] === 'usd' ? 'usd' : 'bs',
+                    'payment_date' => now(),
+                    'payment_method' => $method['method'],
+                    'reference' => $method['reference'] ?? 'Registro rápido',
+                    'notes' => $method['notes'] ?? null,
+                    'registered_by' => auth()->id(),
+                    'exchange_rate' => $validated['exchange_rate'] ?? 1,
+                ]);
+
+                $payments[] = $payment;
             }
-        }
 
-        DB::commit();
-
+            if ($request->hasFile('payment_evidences') && !empty($payments)) {
+                foreach ($request->file('payment_evidences') as $evidence) {
+                    $payments[0]->addPaymentEvidence($evidence);
+                }
+            }
+            DB::commit();
         } catch (\Exception $e) {
+            \Log::error('Error en storeQuickRegister', [
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
             DB::rollBack();
             return back()->withErrors(['error' => 'Error al registrar la membresía: ' . $e->getMessage()]);
         }
-
         return redirect()->route('memberships.index')
             ->with('success', 'Membresía registrada exitosamente.');
     }

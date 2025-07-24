@@ -11,6 +11,7 @@ import { Users, CheckCircle, XCircle, Clock, Plus, Search, X, RefreshCw, Eye, Ed
 import AppLayout from '@/layouts/app-layout';
 import { membershipsBreadcrumbs } from '@/lib/breadcrumbs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Payment } from '@/types/payment';
 
 interface Membership {
   id: number;
@@ -31,6 +32,11 @@ interface Membership {
   currency: 'local' | 'usd';
   payments_count: number;
   created_at: string;
+  payments: {
+    id: number;
+    amount: number;
+    currency: 'local' | 'usd';
+  };
 }
 
 interface Filters {
@@ -103,7 +109,7 @@ export default function MembershipsIndex({ memberships, filters, stats }: Props)
   };
 
   const formatCurrency = (amount: number, currency: string) => {
-    const symbol = currency === 'usd' ? '$' : '₡';
+    const symbol = currency === 'usd' ? '$' : 'Bs';
     return `${symbol}${amount.toLocaleString()}`;
   };
 
@@ -278,7 +284,15 @@ export default function MembershipsIndex({ memberships, filters, stats }: Props)
                       </div>
                     </TableCell>
                     <TableCell>
-                      {formatCurrency(membership.amount_paid, membership.currency)}
+                      {
+                        membership?.payments?.map((payment) => {
+                          return (
+                            <Badge key={payment.id} className={payment.method_color}>
+                              {formatCurrency(payment.amount, payment.currency)}
+                            </Badge>
+                          )
+                        })
+                      }
                     </TableCell>
                     <TableCell>{membership.payments_count}</TableCell>
                     <TableCell className="text-right">

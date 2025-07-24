@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Icon } from '@/components/icon';
 import { Plus, X, Upload, FileImage, FileText, Trash2, CreditCard } from 'lucide-react';
+import Decimal from 'decimal.js';
 
 interface PaymentMethod {
   method: 'cash_usd' | 'cash_local' | 'card_usd' | 'card_local' | 'transfer_usd' | 'transfer_local' | 'crypto' | 'other';
@@ -30,7 +31,8 @@ interface PaymentMethodsFormProps {
   errors?: Record<string, string>;
   targetAmount?: number; // Monto objetivo en USD para calcular conversión
   showExchangeRate?: boolean; // Si mostrar campo de tasa de cambio
-  showDualAmounts?: boolean; // Si mostrar montos en USD y Bs
+  exchangeRate?: string;
+  onExchangeRateChange?: (rate: string) => void;
 }
 
 export default function PaymentMethodsForm({
@@ -45,70 +47,77 @@ export default function PaymentMethodsForm({
   errors = {},
   targetAmount = 0,
   showExchangeRate = true,
-  showDualAmounts = true,
+  exchangeRate,
+  onExchangeRateChange,
 }: PaymentMethodsFormProps) {
-  const [exchangeRate, setExchangeRate] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
-  // Calcular total de todos los métodos de pago
-  const totalAmount = paymentMethods.reduce((sum, method) => {
-    // Usar el monto principal o el monto en la moneda seleccionada
-    const amount = paymentCurrency === 'usd'
-      ? (parseFloat(method.amount_usd || method.amount) || 0)
-      : (parseFloat(method.amount_bs || method.amount) || 0);
-    return sum + amount;
-  }, 0);
-
-    // Calcular total en ambas monedas
+  // Calcular total en ambas monedas
   const totalAmountUSD = paymentMethods.reduce((sum, method) => {
-    return sum + (parseFloat(method.amount_usd || method.amount) || 0);
-  }, 0);
+    if (method.type === 'bs' && method.amount_bs) {
+      const rate = new Decimal(exchangeRate || 0);
+      if (rate.greaterThan(0)) {
+        return sum.plus(new Decimal(method.amount_bs).dividedBy(rate));
+      }
+      return sum.plus(0);
+    }
+    return sum.plus(new Decimal(method.amount_usd || 0));
+  }, new Decimal(0));
 
   const totalAmountBS = paymentMethods.reduce((sum, method) => {
-    return sum + (parseFloat(method.amount_bs || '0') || 0);
-  }, 0);
+    return sum.plus(new Decimal(method.amount_bs || 0));
+  }, new Decimal(0));
+
+  // Calcular total de todos los métodos de pago usando Decimal.js
+  const allPaymentsEquivalentToBs = paymentMethods.reduce((sum, method) => {
+    return sum.plus(new Decimal(method.amount_bs || 0).times(new Decimal(exchangeRate || 1)));
+  }, new Decimal(0));
+
+  const allPaymentAmountUsd = paymentMethods.reduce((sum, method) => {
+    return sum.plus(new Decimal(method.amount_usd || 0));
+  }, new Decimal(0));
 
   // Calcular conversión cuando se paga en bolívares
   const calculateConversion = () => {
-    if (paymentCurrency === 'local' && targetAmount > 0 && exchangeRate) {
-      const rate = parseFloat(exchangeRate);
-      if (rate > 0) {
-        return targetAmount * rate;
+    if (paymentCurrency === 'local' && targetAmount > 0) {
+      const rate = new Decimal(exchangeRate || 0);
+      if (rate.greaterThan(0)) {
+        return new Decimal(targetAmount).times(rate);
       }
     }
-    return 0;
+    return new Decimal(0);
   };
 
   const convertedAmount = calculateConversion();
-  const remainingUSD = targetAmount - totalAmountUSD;
-  const remainingBS = paymentCurrency === 'local' ? convertedAmount - totalAmountBS : 0;
-  const isOverpayingUSD = remainingUSD < 0;
-  const isOverpayingBS = remainingBS < 0;
-  const overpaymentUSD = Math.abs(Math.min(0, remainingUSD));
-  const overpaymentBS = Math.abs(Math.min(0, remainingBS));
+  const remainingUSD = new Decimal(targetAmount).minus(totalAmountUSD);
+  const remainingBS = remainingUSD.times(new Decimal(exchangeRate || 1));
+  const isOverpayingUSD = remainingUSD.lessThan(0);
+  const isOverpayingBS = remainingBS.lessThan(0);
+  const overpaymentUSD = remainingUSD.lessThan(0) ? remainingUSD.abs() : new Decimal(0);
+  const overpaymentBS = remainingBS.lessThan(0) ? remainingBS.abs() : new Decimal(0);
 
   // Determinar el color del restante basado en el porcentaje pagado
-  const getRemainingColor = (remaining: number, total: number) => {
-    if (remaining < 0) return 'text-red-600'; // Exceso - rojo
-    if (remaining === 0) return 'text-green-600'; // Completo - verde
-    const percentagePaid = ((total - remaining) / total) * 100;
-    if (percentagePaid >= 80) return 'text-orange-600'; // Casi completo - naranja
+  const getRemainingColor = (remaining: Decimal, total: Decimal) => {
+    if (remaining.lessThan(0)) return 'text-red-600'; // Exceso - rojo
+    if (remaining.equals(0)) return 'text-green-600'; // Completo - verde
+    const percentagePaid = total.greaterThan(0) ? total.minus(remaining).dividedBy(total).times(100) : new Decimal(0);
+    if (percentagePaid.greaterThanOrEqualTo(80)) return 'text-orange-600'; // Casi completo - naranja
     return 'text-red-600'; // Pendiente - rojo
   };
 
-  const remainingUSDColor = getRemainingColor(remainingUSD, targetAmount);
+  const remainingUSDColor = getRemainingColor(remainingUSD, new Decimal(targetAmount));
   const remainingBSColor = getRemainingColor(remainingBS, convertedAmount);
 
   // Función para calcular montos duales
   const calculateDualAmounts = (amount: string, fromCurrency: 'usd' | 'bs') => {
-    if (!exchangeRate || parseFloat(exchangeRate) <= 0) return { usd: amount, bs: '' };
+    if (!exchangeRate || new Decimal(exchangeRate).lessThanOrEqualTo(0)) return { usd: 0, bs: '' };
 
-    const rate = parseFloat(exchangeRate);
-    const numAmount = parseFloat(amount) || 0;
+    const rate = new Decimal(exchangeRate);
+    const numAmount = new Decimal(amount || 0);
 
     if (fromCurrency === 'usd') {
-      return { usd: amount, bs: (numAmount * rate).toFixed(2) };
+      return { usd: amount, bs: numAmount.times(rate).toFixed(2) };
     } else {
-      return { usd: (numAmount / rate).toFixed(2), bs: amount };
+      return { usd: numAmount.dividedBy(rate).toFixed(2), bs: amount };
     }
   };
 
@@ -121,12 +130,10 @@ export default function PaymentMethodsForm({
       method.amount_usd = value;
       const dualAmounts = calculateDualAmounts(value, 'usd');
       method.amount_bs = dualAmounts.bs;
-      method.amount = value; // Mantener el monto principal
     } else if (field === 'amount_bs') {
       method.amount_bs = value;
       const dualAmounts = calculateDualAmounts(value, 'bs');
-      method.amount_usd = dualAmounts.usd;
-      method.amount = value; // Mantener el monto principal
+      method.amount_usd = dualAmounts.usd.toString();
     }
 
     newMethods[index] = method;
@@ -157,7 +164,7 @@ export default function PaymentMethodsForm({
     const newMethods = [...paymentMethods];
     const typeObject: { type?: 'usd' | 'bs' } = {};
     if (field === 'method') {
-      typeObject.type = value.includes('usd') ? 'usd' : 'bs';
+      typeObject.type = value.includes('usd')|| value === 'crypto' ? 'usd' : 'bs';
     }
     newMethods[index] = { ...newMethods[index], [field]: value, ...typeObject };
     onPaymentMethodsChange(newMethods);
@@ -172,7 +179,6 @@ export default function PaymentMethodsForm({
       transfer_usd: 'Transferencia USD',
       transfer_local: 'Transferencia VES',
       crypto: 'Crypto',
-      other: 'Otro',
     };
     return labels[method as keyof typeof labels] || method;
   };
@@ -224,9 +230,10 @@ export default function PaymentMethodsForm({
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  const formatCurrency = (amount: number, currency: 'local' | 'usd') => {
+  const formatCurrency = (amount: Decimal | number, currency: 'local' | 'usd') => {
     const symbol = currency === 'usd' ? '$' : 'Bs';
-    return `${symbol}${amount.toLocaleString()}`;
+    const numAmount = amount instanceof Decimal ? amount.toNumber() : amount;
+    return `${symbol}${numAmount.toLocaleString()}`;
   };
 
   return (
@@ -255,34 +262,26 @@ export default function PaymentMethodsForm({
 
           {showExchangeRate && (
             <div>
-              <Label htmlFor="exchange_rate">Tasa de Cambio</Label>
+              <Label htmlFor="exchange_rate">Tasa de Cambio (Bs/USD)</Label>
               <Input
                 id="exchange_rate"
                 type="number"
                 step="0.01"
                 min="0"
                 value={exchangeRate}
-                onChange={(e) => setExchangeRate(e.target.value)}
+                onChange={(e) => onExchangeRateChange?.(e.target.value)}
                 placeholder="0.00"
-                disabled={paymentCurrency === 'usd'}
               />
               <p className="text-xs text-muted-foreground">
-                {paymentCurrency === 'usd'
-                  ? 'No aplica (pago en dólares)'
-                  : 'Tasa Bs/USD para conversión automática'}
+                Tasa para conversión automática entre USD y Bs
               </p>
-              {showDualAmounts && exchangeRate && parseFloat(exchangeRate) > 0 && (
-                <p className="text-xs text-blue-600">
-                  💡 Los montos se convertirán automáticamente entre USD y Bs
-                </p>
-              )}
               {errors.exchange_rate && <p className="text-sm text-red-600">{errors.exchange_rate}</p>}
             </div>
           )}
         </div>
 
-        {/* Información de conversión cuando se paga en bolívares */}
-        {paymentCurrency === 'local' && targetAmount > 0 && convertedAmount > 0 && (
+        {/* Información de conversión cuando hay tasa válida */}
+{/*         {targetAmount > 0 && exchangeRate && new Decimal(exchangeRate).greaterThan(0) && (
           <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
@@ -291,15 +290,20 @@ export default function PaymentMethodsForm({
               </div>
               <div className="flex justify-between">
                 <span>Tasa de cambio:</span>
-                <span className="font-medium">Bs {parseFloat(exchangeRate).toFixed(2)}/USD</span>
+                <span className="font-medium">Bs {new Decimal(exchangeRate).toFixed(2)}/USD</span>
               </div>
-              <div className="flex justify-between">
-                <span>Monto equivalente (A pagar) en Bs:</span>
-                <span className="font-bold text-xl text-blue-700">{formatCurrency(convertedAmount, 'local')}</span>
+              {paymentCurrency === 'local' && convertedAmount.greaterThan(0) && (
+                <div className="flex justify-between">
+                  <span>Monto equivalente (A pagar) en Bs:</span>
+                  <span className="font-bold text-xl text-blue-700">{formatCurrency(convertedAmount, 'local')}</span>
+                </div>
+              )}
+              <div className="text-xs text-blue-600 mt-2">
+                💡 Los métodos de pago en Bs se convertirán automáticamente a USD para el cálculo
               </div>
             </div>
           </div>
-        )}
+        )} */}
 
         {/* Métodos de Pago */}
         <div className="space-y-4 mt-2">
@@ -337,7 +341,6 @@ export default function PaymentMethodsForm({
                       <SelectItem value="transfer_usd">Transferencia USD</SelectItem>
                       <SelectItem value="transfer_local">Transferencia VES</SelectItem>
                       <SelectItem value="crypto">Crypto</SelectItem>
-                      <SelectItem value="other">Otro</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -381,7 +384,6 @@ export default function PaymentMethodsForm({
 
           {/* Total y Restantes */}
           <div className="p-4 bg-muted/50 rounded-lg">
-            {showDualAmounts ? (
               <div className="space-y-3">
                 {/* Totales */}
                 <div className="space-y-2">
@@ -392,7 +394,7 @@ export default function PaymentMethodsForm({
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="font-semibold">Total Bs:</span>
+                    <span className="font-semibold">Total Pagado en Bs:</span>
                     <span className="text-xl font-bold text-green-600">
                       {formatCurrency(totalAmountBS, 'local')}
                     </span>
@@ -407,59 +409,102 @@ export default function PaymentMethodsForm({
                       <div className="flex justify-between text-sm">
                         <span>Progreso del pago:</span>
                         <span className="font-medium">
-                          {Math.round(((targetAmount - remainingUSD) / targetAmount) * 100)}%
+                          {new Decimal(targetAmount).minus(remainingUSD).dividedBy(targetAmount).times(100).round().toNumber()}%
                         </span>
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-2">
                         <div
                           className="bg-green-600 h-2 rounded-full transition-all duration-300"
-                          style={{ width: `${Math.min(100, ((targetAmount - remainingUSD) / targetAmount) * 100)}%` }}
+                          style={{ width: `${Math.min(100, new Decimal(targetAmount).minus(remainingUSD).dividedBy(targetAmount).times(100).toNumber())}%` }}
                         ></div>
                       </div>
                     </div>
 
-                    {/* Restantes/Exceso */}
-                    <div className="space-y-2">
+                    {/* Botones de pagar restante */}
+                    {!remainingUSD.equals(0) && (
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-8 text-xs"
+                          onClick={() => {
+                            // Lógica para agregar método de pago con el restante USD
+                            const newMethod = {
+                              method: 'cash_usd' as const,
+                              type: 'usd' as const,
+                              amount: '',
+                              amount_usd: remainingUSD.abs().toString(),
+                              amount_bs: '',
+                              reference: 'Pago restante',
+                              notes: ''
+                            };
+                            onPaymentMethodsChange([...paymentMethods, newMethod]);
+                          }}
+                        >
+                          <span className="flex flex-col items-center">
+                            <span className="text-xs font-medium">
+                              {remainingUSD.lessThan(0) ? 'Exceso' : 'Restante'}
+                            </span>
+                            <span className={`text-sm font-bold ${remainingUSDColor}`}>
+                              {formatCurrency(remainingUSD.abs(), 'usd')}
+                            </span>
+                          </span>
+                        </Button>
+
+                        {convertedAmount.greaterThan(0) && !remainingBS.equals(0) && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-8 text-xs"
+                            onClick={() => {
+                              // Lógica para agregar método de pago con el restante Bs
+                              const newMethod = {
+                                method: 'cash_local' as const,
+                                type: 'bs' as const,
+                                amount: '',
+                                amount_usd: '',
+                                amount_bs: remainingBS.abs().toString(),
+                                reference: 'Pago restante',
+                                notes: ''
+                              };
+                              onPaymentMethodsChange([...paymentMethods, newMethod]);
+                            }}
+                          >
+                            <span className="flex flex-col items-center">
+                              <span className="text-xs font-medium">
+                                {remainingBS.lessThan(0) ? 'Exceso' : 'Restante'}
+                              </span>
+                              <span className={`text-sm font-bold ${remainingBSColor}`}>
+                                {formatCurrency(remainingBS.abs(), 'local')}
+                              </span>
+                            </span>
+                          </Button>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Restantes/Exceso (texto informativo) */}
+                    <div className="space-y-1 text-xs text-muted-foreground">
                       <div className="flex items-center justify-between">
-                        <span className="font-semibold">
-                          {remainingUSD < 0 ? 'Exceso USD:' : 'Restante USD:'}
-                        </span>
-                        <span className={`text-xl font-bold ${remainingUSDColor}`}>
-                          {remainingUSD < 0 ? '+' : ''}{formatCurrency(Math.abs(remainingUSD), 'usd')}
+                        <span>Restante USD:</span>
+                        <span className={remainingUSDColor}>
+                          {remainingUSD.lessThan(0) ? '+' : ''}{formatCurrency(remainingUSD.abs(), 'usd')}
                         </span>
                       </div>
-                      {convertedAmount > 0 && (
+                      {convertedAmount.greaterThan(0) && (
                         <div className="flex items-center justify-between">
-                          <span className="font-semibold">
-                            {remainingBS < 0 ? 'Exceso Bs:' : 'Restante Bs:'}
-                          </span>
-                          <span className={`text-xl font-bold ${remainingBSColor}`}>
-                            {remainingBS < 0 ? '+' : ''}{formatCurrency(Math.abs(remainingBS), 'local')}
+                          <span>Restante Bs:</span>
+                          <span className={remainingBSColor}>
+                            {remainingBS.lessThan(0) ? '+' : ''}{formatCurrency(remainingBS.abs(), 'local')}
                           </span>
                         </div>
                       )}
                     </div>
                   </div>
                 )}
-
-                {/* Total Principal */}
-                <div className="border-t pt-2">
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold">Total Principal ({paymentCurrency === 'usd' ? 'USD' : 'Bs'}):</span>
-                    <span className="text-2xl font-bold text-green-600">
-                      {formatCurrency(totalAmount, paymentCurrency)}
-                    </span>
-                  </div>
-                </div>
               </div>
-            ) : (
-              <div className="flex items-center justify-between">
-                <span className="font-semibold">Total del Pago:</span>
-                <span className="text-2xl font-bold text-green-600">
-                  {formatCurrency(totalAmount, paymentCurrency)}
-                </span>
-              </div>
-            )}
           </div>
         </div>
 
@@ -485,7 +530,7 @@ export default function PaymentMethodsForm({
                       </div>
                     </div>
                   )}
-                  {isOverpayingBS && convertedAmount > 0 && (
+                  {isOverpayingBS && convertedAmount.greaterThan(0) && (
                     <div className="text-sm text-red-700">
                       <p>Bs: El monto total excede el objetivo por {formatCurrency(overpaymentBS, 'local')}.</p>
                       <div className="text-xs text-red-600 mt-1">

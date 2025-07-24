@@ -65,6 +65,7 @@ export default function QuickRenew({ membership, plans }: Props) {
     plan_id: membership.plan.id.toString(),
     payment_currency: membership.currency,
     notes: '',
+    exchange_rate: '',
     payment_methods_json: JSON.stringify([
       { method: 'cash_usd' as const, amount: '', type: 'usd', reference: '', notes: '' }
     ]),
@@ -203,7 +204,8 @@ export default function QuickRenew({ membership, plans }: Props) {
             errors={errors}
             targetAmount={selectedPlan?.price || 0}
             showExchangeRate={true}
-            showDualAmounts={true}
+            exchangeRate={data.exchange_rate}
+            onExchangeRateChange={(rate) => setData('exchange_rate', rate)}
           />
 
           {/* Resumen */}

@@ -13,6 +13,7 @@ import AppLayout from '@/layouts/app-layout';
 import { membershipsBreadcrumbs } from '@/lib/breadcrumbs';
 import PaymentMethodsForm from '@/components/payment-methods-form';
 import { bodyToFetch } from '@/helpers';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 interface Plan {
   id: number;
@@ -49,6 +50,9 @@ export default function QuickRegister({ plans, clients }: Props) {
     { method: 'cash_usd', amount: '', type: 'usd', reference: '', notes: '' }
   ]);
   const [paymentEvidences, setPaymentEvidences] = useState<File[]>([]);
+  const getNestedError = (path: string) => {
+    return (errors as Record<string, string>)[path];
+  };
 
   const { data, setData, processing, errors } = useForm({
     client_id: '',
@@ -64,18 +68,26 @@ export default function QuickRegister({ plans, clients }: Props) {
     payment_methods_json: JSON.stringify([
       { method: 'cash_usd' as const, amount: '', type: 'usd', reference: '', notes: '' }
     ]),
+    exchange_rate: '',
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const paymentMethods = JSON.parse(data.payment_methods_json);
+
     const form = {
       ...data,
-      payment_methods: paymentMethods,
       payment_evidences: paymentEvidences,
     }
     const formData = bodyToFetch(form, true, true);
-    router.post(route('memberships.store-quick-register'), formData);
+
+    router.post(route('memberships.store-quick-register'), formData, {
+      onError: (errors) => {
+        console.log('Errores recibidos:', errors);
+      },
+      onSuccess: () => {
+        console.log('Éxito en el envío');
+      }
+    });
   };
 
   const selectedPlan = plans.find(plan => plan.id.toString() === data.plan_id);
@@ -95,6 +107,22 @@ export default function QuickRegister({ plans, clients }: Props) {
             Volver
           </Button>
           <Heading title="Registro Rápido de Membresía" />
+          <div className="flex items-center gap-4">
+            {Object.keys(errors).length > 0 && (
+              <Alert variant="destructive">
+                <AlertTitle>Errores de Validación</AlertTitle>
+                <AlertDescription>
+                  <ul className="list-disc list-inside">
+                    {Object.entries(errors).map(([key, error]) => (
+                      <li key={key}>
+                        <strong>{key}:</strong> {Array.isArray(error) ? error[0] : error}
+                      </li>
+                    ))}
+                  </ul>
+                </AlertDescription>
+              </Alert>
+            )}
+          </div>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-2">
@@ -153,8 +181,7 @@ export default function QuickRegister({ plans, clients }: Props) {
                       value={data.new_client.name}
                       onChange={(e) => setData('new_client', { ...data.new_client, name: e.target.value })}
                     />
-                    {/* @ts-expect-error - non nested errors */}
-                    {errors['new_client.name'] && <p className="text-sm text-red-600">{errors['new_client.name']}</p>}
+                    {getNestedError('new_client.name') && <p className="text-sm text-red-600">{getNestedError('new_client.name')}</p>}
                   </div>
                   <div>
                     <Label htmlFor="new_client.email">Email</Label>
@@ -164,8 +191,7 @@ export default function QuickRegister({ plans, clients }: Props) {
                       value={data.new_client.email}
                       onChange={(e) => setData('new_client', { ...data.new_client, email: e.target.value })}
                     />
-                    {/* @ts-expect-error - non nested errors */}
-                    {errors['new_client.email'] && <p className="text-sm text-red-600">{errors['new_client.email']}</p>}
+                    {getNestedError('new_client.email') && <p className="text-sm text-red-600">{getNestedError('new_client.email')}</p>}
                   </div>
                   <div>
                     <Label htmlFor="new_client.phone">Teléfono</Label>
@@ -174,15 +200,12 @@ export default function QuickRegister({ plans, clients }: Props) {
                       value={data.new_client.phone}
                       onChange={(e) => setData('new_client', { ...data.new_client, phone: e.target.value })}
                     />
-                    {/* @ts-expect-error - non nested errors */}
-                    {errors['new_client.phone'] && <p className="text-sm text-red-600">{errors['new_client.phone']}</p>}
+                    {getNestedError('new_client.phone') && <p className="text-sm text-red-600">{getNestedError('new_client.phone')}</p>}
                   </div>
                 </div>
               )}
             </CardContent>
           </Card>
-
-          {/* Membresía */}
           <Card className="md:w-1/2">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -222,8 +245,6 @@ export default function QuickRegister({ plans, clients }: Props) {
             </CardContent>
           </Card>
           </div>
-
-          {/* Pago */}
           <PaymentMethodsForm
             paymentCurrency={data.payment_currency as 'local' | 'usd'}
             onPaymentCurrencyChange={(currency) => setData('payment_currency', currency)}
@@ -236,10 +257,9 @@ export default function QuickRegister({ plans, clients }: Props) {
             errors={errors}
             targetAmount={data.payment_currency === 'usd' ? selectedPlan?.price_usd || 0 : selectedPlan?.price || 0}
             showExchangeRate={true}
-            showDualAmounts={true}
+            exchangeRate={data.exchange_rate}
+            onExchangeRateChange={(rate) => setData('exchange_rate', rate)}
           />
-
-          {/* Resumen */}
           {selectedPlan && (
             <Card className="gap-0 py-2">
               <CardHeader className="pb-0">
