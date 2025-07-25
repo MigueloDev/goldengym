@@ -359,10 +359,12 @@ export default function ShowClient({ client }: Props) {
                                 <CardTitle className="text-sm">Acciones</CardTitle>
                             </CardHeader>
                             <CardContent className="space-y-2">
-                                <Button variant="outline" className="w-full justify-start">
-                                    <FileText className="mr-2 h-4 w-4" />
-                                    Ver Documentos
-                                </Button>
+                                <Link href={`/clients/${client.id}/documents`}>
+                                    <Button variant="outline" className="w-full justify-start">
+                                        <FileText className="mr-2 h-4 w-4" />
+                                        Ver Documentos
+                                    </Button>
+                                </Link>
                                 <Button variant="outline" className="w-full justify-start">
                                     <CreditCard className="mr-2 h-4 w-4" />
                                     Renovar Membresía

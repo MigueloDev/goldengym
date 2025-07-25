@@ -472,6 +472,7 @@ export default function EditClient({ client, pathologies }: Props) {
                 {selectedPathologies.length > 0 && (
                   <div className="space-y-3">
                     <Label>Patologías seleccionadas</Label>
+                    <div className="grid grid-cols-5 gap-4">
                     {selectedPathologies.map((pathology) => (
                       <div key={pathology.id} className="flex items-start space-x-3 p-3 border rounded-lg">
                         <div className="flex-1 space-y-2">
@@ -498,6 +499,7 @@ export default function EditClient({ client, pathologies }: Props) {
                         </div>
                       </div>
                     ))}
+                    </div>
                   </div>
                 )}
               </CardContent>

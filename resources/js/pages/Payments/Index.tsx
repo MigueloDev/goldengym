@@ -48,6 +48,15 @@ import { paymentsBreadcrumbs } from '@/lib/breadcrumbs';
     created_at: string;
     method_color: string;
     method_label: string;
+    payable_type: 'membership' | 'membership_renewal';
+    payable: {
+      client: {
+        name: string;
+      };
+      plan: {
+        name: string;
+      };
+    }
 }
 
 interface Props {
@@ -337,9 +346,6 @@ export default function PaymentsIndex({ payments, filters, stats }: Props) {
                                         <TableCell>
                                             <div className="font-medium">
                                                 {formatCurrency(payment.amount, payment.currency)}
-                                            </div>
-                                            <div className="text-xs text-muted-foreground">
-                                                {payment.currency.toUpperCase()}
                                             </div>
                                         </TableCell>
                                         <TableCell>

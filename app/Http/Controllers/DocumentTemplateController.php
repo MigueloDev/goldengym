@@ -56,32 +56,35 @@ class DocumentTemplateController extends Controller
 
     public function show(DocumentTemplate $template)
     {
-        $template->load('createdBy');
+
 
         return Inertia::render('DocumentTemplates/Show', [
             'template' => $template
         ]);
     }
 
-    public function edit(DocumentTemplate $template)
+    public function edit(int $id)
     {
         $templateKeys = TemplateKeys::all();
 
+        $documentTemplate = DocumentTemplate::with('createdBy')->find($id);
+
         return Inertia::render('DocumentTemplates/Edit', [
-            'template' => $template,
+            'template' => $documentTemplate,
             'templateKeys' => $templateKeys
         ]);
     }
 
-    public function update(Request $request, DocumentTemplate $template)
+    public function update(Request $request, int $id)
     {
+        $template = DocumentTemplate::findOrFail($id);
+
         $request->validate([
             'name' => 'required|string|max:255',
             'content' => 'required|string',
             'variables' => 'nullable|array',
             'status' => 'required|in:active,inactive'
         ]);
-
         $template->update([
             'name' => $request->name,
             'content' => $request->content,

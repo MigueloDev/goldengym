@@ -74,12 +74,6 @@ export default function DocumentTemplatesIndex({ templates }: Props) {
                   </div>
 
                   <div className="flex gap-2 mt-4">
-                    <Link href={`/document-templates/${template.id}`}>
-                      <Button variant="outline" size="sm">
-                        <Eye className="mr-2 h-4 w-4" />
-                        Ver
-                      </Button>
-                    </Link>
                     <Link href={`/document-templates/${template.id}/edit`}>
                       <Button variant="outline" size="sm">
                         <Edit className="mr-2 h-4 w-4" />

@@ -29,7 +29,7 @@ class Payment extends Model
         'payment_date' => 'date',
     ];
 
-    protected $appends = ['method_color', 'method_label'];
+    protected $appends = ['method_color', 'method_label', 'membership', 'membership_renewal'];
 
     public function file()
     {
@@ -46,14 +46,20 @@ class Payment extends Model
         return $this->morphTo();
     }
 
-    public function membership()
+    public function getMembershipAttribute()
     {
-        return $this->belongsTo(Membership::class, 'payable_id')->where('payable_type', Membership::class);
+        if ($this->payable_type === Membership::class) {
+            return Membership::find($this->payable_id);
+        }
+        return null;
     }
 
-    public function membershipRenewal()
+    public function getMembershipRenewalAttribute()
     {
-        return $this->belongsTo(MembershipRenewal::class, 'payable_id')->where('payable_type', MembershipRenewal::class);
+        if ($this->payable_type === MembershipRenewal::class) {
+            return MembershipRenewal::find($this->payable_id);
+        }
+        return null;
     }
 
     public function registeredBy()
@@ -156,5 +162,21 @@ class Payment extends Model
         ];
 
         return $colors[$this->payment_method] ?? 'bg-gray-100 text-gray-800';
+    }
+
+    public function membership()
+    {
+        if ($this->payable_type === Membership::class) {
+            return $this->belongsTo(Membership::class, 'payable_id');
+        }
+        return $this->hasOneThrough(Membership::class, MembershipRenewal::class, 'id', 'id', 'payable_id', 'membership_id');
+    }
+
+    public function membershipRenewal()
+    {
+        if ($this->payable_type === MembershipRenewal::class) {
+            return $this->belongsTo(MembershipRenewal::class, 'payable_id');
+        }
+        return $this->belongsTo(MembershipRenewal::class, 'payable_id')->whereNull('id');
     }
 }

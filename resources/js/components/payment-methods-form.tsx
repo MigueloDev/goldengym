@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Icon } from '@/components/icon';
 import { Plus, X, Upload, FileImage, FileText, Trash2, CreditCard } from 'lucide-react';
 import Decimal from 'decimal.js';
+import { getMethodLabel } from '@/helpers';
 
 interface PaymentMethod {
   method: 'cash_usd' | 'cash_local' | 'card_usd' | 'card_local' | 'transfer_usd' | 'transfer_local' | 'crypto' | 'other';
@@ -186,18 +187,6 @@ export default function PaymentMethodsForm({
     onPaymentMethodsChange(newMethods);
   };
 
-  const getMethodLabel = (method: string) => {
-    const labels = {
-      cash_usd: 'Efectivo USD',
-      cash_local: 'Efectivo VES',
-      card_usd: 'Tarjeta USD',
-      card_local: 'Tarjeta VES',
-      transfer_usd: 'Transferencia USD',
-      transfer_local: 'Transferencia VES',
-      crypto: 'Crypto',
-    };
-    return labels[method as keyof typeof labels] || method;
-  };
 
   // Funciones para manejar evidencias de pago
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {

@@ -4,7 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { FileText, Download, Loader2 } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { FileText, Download, Loader2, AlertCircle } from 'lucide-react';
 import { router, usePage } from '@inertiajs/react';
 import { useToast } from '@/components/ui/toast';
 import { PageProps } from '@inertiajs/core';
@@ -28,9 +29,16 @@ interface Props {
   clientName: string;
   templates: DocumentTemplate[];
   trigger?: React.ReactNode;
+  existingDocumentsCount?: number;
 }
 
-export default function GenerateDocumentModal({ clientId, clientName, templates, trigger }: Props) {
+export default function GenerateDocumentModal({
+  clientId,
+  clientName,
+  templates,
+  trigger,
+  existingDocumentsCount = 0
+}: Props) {
   const [selectedTemplate, setSelectedTemplate] = useState<number | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
@@ -79,6 +87,7 @@ export default function GenerateDocumentModal({ clientId, clientName, templates,
   };
 
   const activeTemplates = templates.filter(template => template.status === 'active');
+  const hasExistingDocuments = existingDocumentsCount > 0;
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -99,6 +108,18 @@ export default function GenerateDocumentModal({ clientId, clientName, templates,
         </DialogHeader>
 
         <div className="space-y-4">
+          {/* Advertencia sobre documentos existentes */}
+          {hasExistingDocuments && (
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                <strong>Advertencia:</strong> Este cliente ya tiene {existingDocumentsCount} documento(s) generado(s).
+                Generar más documentos puede crear duplicados innecesarios.
+                Considera revisar los documentos existentes antes de generar nuevos.
+              </AlertDescription>
+            </Alert>
+          )}
+
           <div className="space-y-2">
             <label className="text-sm font-medium">Plantilla de Documento</label>
             <Select value={selectedTemplate?.toString() || ''} onValueChange={(value) => setSelectedTemplate(parseInt(value))}>

@@ -268,7 +268,7 @@ class PaymentController extends Controller
      */
     public function show(Payment $payment)
     {
-        $payment->load(['payable.client', 'payable.plan', 'registeredBy', 'paymentEvidences']);
+        $payment->load(['payable.client', 'payable.plan', 'registeredBy', 'paymentEvidences', 'membership']);
 
         return Inertia::render('Payments/Show', [
             'payment' => $payment,
@@ -280,7 +280,7 @@ class PaymentController extends Controller
      */
     public function edit(Payment $payment)
     {
-        $payment->load(['payable', 'paymentEvidences']);
+        $payment->load(['payable', 'paymentEvidences', 'membership.client', 'membership.plan']);
 
         return Inertia::render('Payments/Edit', [
             'payment' => $payment,

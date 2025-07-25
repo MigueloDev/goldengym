@@ -357,12 +357,11 @@ class MembershipController extends Controller
         $membership->load([
             'client',
             'plan',
-            'processedBy',
+            'registeredBy',
             'payments.paymentEvidences',
             'renewals.payments.paymentEvidences',
             'renewals.processedBy',
         ]);
-
         return Inertia::render('Memberships/Show', [
             'membership' => $membership,
         ]);

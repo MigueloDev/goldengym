@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Client;
 use App\Models\Pathology;
 use App\Models\DocumentTemplate;
+use App\Models\File;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -18,7 +19,10 @@ class ClientController extends Controller
     public function index(Request $request)
     {
         $query = Client::with(['activeMembership', 'pathologies', 'profilePhoto'])
-            ->withCount('memberships');
+            ->withCount('memberships')
+            ->withCount(['files' => function($query) {
+                $query->whereIn('type', ['document', 'generated_document', 'custom_document']);
+            }]);
 
         // Filtros
         if ($request->filled('search')) {
@@ -84,7 +88,15 @@ class ClientController extends Controller
                 'with_membership' => Client::whereHas('activeMembership')->count(),
                 'expiring_soon' => Client::withExpiringSoon()->count(),
             ],
-            'documentTemplates' => DocumentTemplate::active()->get()
+            'documentTemplates' => DocumentTemplate::active()->get(),
+            'documentStats' => [
+                'total_documents' => File::where('fileable_type', Client::class)
+                    ->whereIn('type', ['document', 'generated_document', 'custom_document'])
+                    ->count(),
+                'clients_with_documents' => Client::whereHas('files', function($query) {
+                    $query->whereIn('type', ['document', 'generated_document', 'custom_document']);
+                })->count(),
+            ]
         ]);
     }
 

@@ -59,6 +59,18 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('document-templates.generate');
     Route::get('document-templates/templates-for-client', [DocumentTemplateController::class, 'getTemplatesForClient'])
         ->name('document-templates.templates-for-client');
+
+    // Rutas para documentos de clientes
+    Route::get('clients/{client}/documents', [App\Http\Controllers\ClientDocumentController::class, 'index'])
+        ->name('clients.documents.index');
+    Route::post('clients/{client}/documents', [App\Http\Controllers\ClientDocumentController::class, 'store'])
+        ->name('clients.documents.store');
+    Route::delete('clients/{client}/documents/{document}', [App\Http\Controllers\ClientDocumentController::class, 'destroy'])
+        ->name('clients.documents.destroy');
+    Route::get('clients/{client}/documents/{document}/download', [App\Http\Controllers\ClientDocumentController::class, 'download'])
+        ->name('clients.documents.download');
+    Route::get('clients/{client}/documents/stats', [App\Http\Controllers\ClientDocumentController::class, 'stats'])
+        ->name('clients.documents.stats');
 });
 
 require __DIR__.'/settings.php';

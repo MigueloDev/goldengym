@@ -8,6 +8,7 @@ import { ArrowLeft, Edit, RefreshCw, User, Calendar, CreditCard } from 'lucide-r
 import { Label } from '@/components/ui/label';
 import { membershipsBreadcrumbs } from '@/lib/breadcrumbs';
 import AppLayout from '@/layouts/app-layout';
+import { getMethodLabel } from '@/helpers';
 
 interface PaymentEvidence {
   id: number;
@@ -36,7 +37,7 @@ interface Renewal {
   new_end_date: string;
   amount_paid: number;
   currency: string;
-  processedBy: {
+  processed_by: {
     id: number;
     name: string;
   };
@@ -97,24 +98,20 @@ export default function MembershipShow({ membership }: Props) {
       suspended: 'bg-yellow-100 text-yellow-800',
       cancelled: 'bg-gray-100 text-gray-800',
     };
-    return <Badge className={variants[status as keyof typeof variants]}>{status}</Badge>;
-  };
-
-  const getPaymentMethodLabel = (method: string) => {
-    const methods = {
-      cash: 'Efectivo',
-      card: 'Tarjeta',
-      transfer: 'Transferencia',
-      other: 'Otro',
+    const label = {
+      active: 'Activa',
+      expired: 'Expirada',
+      suspended: 'Suspendida',
+      cancelled: 'Cancelada',
     };
-    return methods[method as keyof typeof methods] || method;
+    return <Badge className={variants[status as keyof typeof variants]}>{label[status as keyof typeof label]}</Badge>;
   };
 
   return (
     <AppLayout breadcrumbs={membershipsBreadcrumbs.show(membership.id, membership.client.name)}>
       <Head title={`Membresía - ${membership.client.name}`} />
-      <div className="flex h-full flex-1 flex-col gap-6 p-6">
-        <div className="space-y-6">
+      <div className="flex h-full flex-1 flex-col gap-1 p-6">
+        <div className="space-y-1">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -142,9 +139,9 @@ export default function MembershipShow({ membership }: Props) {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Información Principal */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="lg:col-span-2 space-y-2">
             {/* Información del Cliente */}
-            <Card>
+            <Card className="py-2">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Icon iconNode={User} className="h-5 w-5" />
@@ -176,7 +173,7 @@ export default function MembershipShow({ membership }: Props) {
             </Card>
 
             {/* Información de la Membresía */}
-            <Card>
+            <Card className="py-2">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Icon iconNode={Calendar} className="h-5 w-5" />
@@ -240,7 +237,7 @@ export default function MembershipShow({ membership }: Props) {
                               {formatCurrency(payment.amount, payment.currency)}
                             </div>
                             <div className="text-sm text-muted-foreground">
-                              {getPaymentMethodLabel(payment.payment_method)}
+                              {getMethodLabel(payment.payment_method)}
                               {payment.reference && ` - ${payment.reference}`}
                             </div>
                           </div>
@@ -306,7 +303,7 @@ export default function MembershipShow({ membership }: Props) {
                         <div className="text-sm text-muted-foreground">
                           <div>Período anterior: {formatDate(renewal.previous_end_date)}</div>
                           <div>Nuevo período: {formatDate(renewal.new_end_date)}</div>
-                          <div>Procesado por: {renewal.processedBy.name}</div>
+                          <div>Procesado por: {renewal.processed_by?.name}</div>
                         </div>
 
                         {/* Pagos de la renovación */}
@@ -322,7 +319,7 @@ export default function MembershipShow({ membership }: Props) {
                                         {formatCurrency(payment.amount, payment.currency)}
                                       </span>
                                       <div className="text-xs text-muted-foreground">
-                                        {getPaymentMethodLabel(payment.payment_method)}
+                                        {getMethodLabel(payment.payment_method)}
                                         {payment.reference && ` - ${payment.reference}`}
                                       </div>
                                     </div>
@@ -365,7 +362,7 @@ export default function MembershipShow({ membership }: Props) {
           </div>
 
           {/* Sidebar */}
-          <div className="space-y-6">
+          <div className="space-y-1">
             {/* Acciones Rápidas */}
             <Card>
               <CardHeader>

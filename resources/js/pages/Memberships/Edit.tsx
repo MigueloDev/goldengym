@@ -8,6 +8,8 @@ import { Label } from '@/components/ui/label';
 import { Icon } from '@/components/icon';
 import Heading from '@/components/heading';
 import { ArrowLeft, Save } from 'lucide-react';
+import AppLayout from '@/layouts/app-layout';
+import { membershipsBreadcrumbs } from '@/lib/breadcrumbs';
 
 interface Plan {
   id: number;
@@ -77,10 +79,10 @@ export default function MembershipEdit({ membership, plans }: Props) {
   };
 
   return (
-    <>
-      <Head title={`Editar Membresía - ${membership.client.name}`} />
-
-      <div className="space-y-6">
+    <AppLayout breadcrumbs={membershipsBreadcrumbs.edit(membership.id, membership.client.name)}>
+      <Head title="Editar Membresía - ${membership.client.name}" />
+      <div className="flex h-full flex-1 flex-col gap-1 p-6">
+        <div className="space-y-1">
         {/* Header */}
         <div className="flex items-center gap-4">
           <Button variant="outline" size="sm" onClick={() => window.history.back()}>
@@ -90,7 +92,7 @@ export default function MembershipEdit({ membership, plans }: Props) {
           <Heading title={`Editar Membresía de ${membership.client.name}`} />
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-1">
           {/* Información del Cliente */}
           <Card>
             <CardHeader>
@@ -218,7 +220,8 @@ export default function MembershipEdit({ membership, plans }: Props) {
             </Button>
           </div>
         </form>
+        </div>
       </div>
-    </>
+    </AppLayout>
   );
 }

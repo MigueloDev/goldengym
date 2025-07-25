@@ -27,3 +27,16 @@ export const createFormDataWithFiles = (data, files = []) => {
 
     return formData;
 };
+
+export const getMethodLabel = (method) => {
+    const labels = {
+      cash_usd: 'Efectivo USD',
+      cash_local: 'Efectivo VES',
+      card_usd: 'Tarjeta USD',
+      card_local: 'Tarjeta VES',
+      transfer_usd: 'Transferencia USD',
+      transfer_local: 'Transferencia VES',
+      crypto: 'Crypto',
+    };
+    return labels[method] || method;
+  };

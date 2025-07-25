@@ -56,6 +56,7 @@ interface Client {
         };
     }>;
     memberships_count: number;
+    files_count: number;
 }
 
 interface DocumentTemplate {
@@ -146,7 +147,7 @@ export default function ClientsIndex({ clients, filters, stats, documentTemplate
 
         if (daysUntilExpiry < 0) return 'Expirada';
         if (daysUntilExpiry <= 3) return 'Expira pronto';
-        return 'Activa';
+        return 'Subscripción Activa';
     };
 
     const getAge = (birthDate: string | null) => {
@@ -385,6 +386,14 @@ export default function ClientsIndex({ clients, filters, stats, documentTemplate
                                                     </div>
                                                 </div>
                                             )}
+                                            {client.files_count > 0 && (
+                                                <div className="flex items-center space-x-2">
+                                                    <span className="text-sm font-medium">Documentos:</span>
+                                                    <Badge variant="outline" className="text-xs">
+                                                        {client.files_count} documento{client.files_count !== 1 ? 's' : ''}
+                                                    </Badge>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                     <div className="flex items-center space-x-2">
@@ -392,6 +401,7 @@ export default function ClientsIndex({ clients, filters, stats, documentTemplate
                                             clientId={client.id}
                                             clientName={client.name}
                                             templates={documentTemplates}
+                                            existingDocumentsCount={client.files_count}
                                             trigger={
                                                 <Button variant="outline" size="sm">
                                                     <FileText className="h-4 w-4" />

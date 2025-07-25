@@ -99,8 +99,8 @@ export default function ShowPayment({ payment }: Props) {
         return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     };
 
-    const formatCurrency = (amount: number, currency: 'local' | 'usd') => {
-        const symbol = currency === 'usd' ? '$' : '₡';
+    const formatCurrency = (amount: number, currency: 'local' | 'usd' = 'local') => {
+        const symbol = currency === 'usd' ? '$' : 'Bs';
         return `${symbol}${amount.toLocaleString()}`;
     };
 
@@ -281,27 +281,27 @@ export default function ShowPayment({ payment }: Props) {
                                             {payment.payable.plan.name}
                                         </p>
                                         <p className="text-xs text-muted-foreground">
-                                            Precio: {formatCurrency(payment.payable.plan.price, payment.payable.currency)}
+                                            Precio: {formatCurrency(payment.payable.plan.price, 'usd')}
                                         </p>
                                     </div>
                                 </div>
                                 <div className="grid gap-4 md:grid-cols-3">
                                     <div>
                                         <h4 className="font-semibold mb-2">Estado</h4>
-                                        {getStatusBadge(payment.payable.status)}
+                                        {getStatusBadge(payment.membership.status)}
                                     </div>
                                     <div>
                                         <h4 className="font-semibold mb-2">Fecha de Inicio</h4>
                                         <div className="flex items-center gap-2">
                                             <Calendar className="h-4 w-4 text-muted-foreground" />
-                                            <span className="text-sm">{formatDate(payment.payable.start_date)}</span>
+                                            <span className="text-sm">{formatDate(payment.membership.start_date)}</span>
                                         </div>
                                     </div>
                                     <div>
                                         <h4 className="font-semibold mb-2">Fecha de Fin</h4>
                                         <div className="flex items-center gap-2">
                                             <Calendar className="h-4 w-4 text-muted-foreground" />
-                                            <span className="text-sm">{formatDate(payment.payable.end_date)}</span>
+                                            <span className="text-sm">{formatDate(payment.membership.end_date)}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -310,13 +310,13 @@ export default function ShowPayment({ payment }: Props) {
                                     <div>
                                         <h4 className="font-semibold mb-2">Monto Pagado</h4>
                                         <p className="text-lg font-medium">
-                                            {formatCurrency(payment.payable.amount_paid, payment.payable.currency)}
+                                            {formatCurrency(payment.amount, payment.currency)}
                                         </p>
                                     </div>
                                     <div>
                                         <h4 className="font-semibold mb-2">Moneda</h4>
                                         <p className="text-sm text-muted-foreground">
-                                            {payment.payable.currency.toUpperCase()}
+                                            {payment.currency.toUpperCase()}
                                         </p>
                                     </div>
                                 </div>
@@ -389,8 +389,7 @@ export default function ShowPayment({ payment }: Props) {
                         </Card>
                     </div>
                 </div>
-                </div>
-            </div>
+
 
             {/* Modal para zoom de imágenes */}
             {isImageModalOpen && selectedImage && (
@@ -414,6 +413,8 @@ export default function ShowPayment({ payment }: Props) {
                     </div>
                 </div>
             )}
+            </div>
+          </div>
         </AppLayout>
     );
 }

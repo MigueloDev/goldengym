@@ -48,6 +48,7 @@ const MenuBar = ({ editor }: { editor: Editor | null }) => {
     <div className="border-b p-2 flex flex-wrap gap-1 items-center">
       {/* Formato de texto */}
       <Button
+        type="button"
         variant={editor.isActive('bold') ? 'default' : 'ghost'}
         size="sm"
         onClick={() => editor.chain().focus().toggleBold().run()}
@@ -56,6 +57,7 @@ const MenuBar = ({ editor }: { editor: Editor | null }) => {
         <Bold className="h-4 w-4" />
       </Button>
       <Button
+        type="button"
         variant={editor.isActive('italic') ? 'default' : 'ghost'}
         size="sm"
         onClick={() => editor.chain().focus().toggleItalic().run()}
@@ -64,6 +66,7 @@ const MenuBar = ({ editor }: { editor: Editor | null }) => {
         <Italic className="h-4 w-4" />
       </Button>
       <Button
+        type="button"
         variant={editor.isActive('underline') ? 'default' : 'ghost'}
         size="sm"
         onClick={() => editor.chain().focus().toggleUnderline().run()}
@@ -75,6 +78,7 @@ const MenuBar = ({ editor }: { editor: Editor | null }) => {
 
       {/* Alineación */}
       <Button
+        type="button"
         variant={editor.isActive({ textAlign: 'left' }) ? 'default' : 'ghost'}
         size="sm"
         onClick={() => editor.chain().focus().setTextAlign('left').run()}
@@ -82,6 +86,7 @@ const MenuBar = ({ editor }: { editor: Editor | null }) => {
         <AlignLeft className="h-4 w-4" />
       </Button>
       <Button
+        type="button"
         variant={editor.isActive({ textAlign: 'center' }) ? 'default' : 'ghost'}
         size="sm"
         onClick={() => editor.chain().focus().setTextAlign('center').run()}
@@ -89,6 +94,7 @@ const MenuBar = ({ editor }: { editor: Editor | null }) => {
         <AlignCenter className="h-4 w-4" />
       </Button>
       <Button
+        type="button"
         variant={editor.isActive({ textAlign: 'right' }) ? 'default' : 'ghost'}
         size="sm"
         onClick={() => editor.chain().focus().setTextAlign('right').run()}
@@ -96,6 +102,7 @@ const MenuBar = ({ editor }: { editor: Editor | null }) => {
         <AlignRight className="h-4 w-4" />
       </Button>
       <Button
+        type="button"
         variant={editor.isActive({ textAlign: 'justify' }) ? 'default' : 'ghost'}
         size="sm"
         onClick={() => editor.chain().focus().setTextAlign('justify').run()}
@@ -107,6 +114,7 @@ const MenuBar = ({ editor }: { editor: Editor | null }) => {
 
       {/* Listas */}
       <Button
+        type="button"
         variant={editor.isActive('bulletList') ? 'default' : 'ghost'}
         size="sm"
         onClick={() => editor.chain().focus().toggleBulletList().run()}
@@ -114,6 +122,7 @@ const MenuBar = ({ editor }: { editor: Editor | null }) => {
         <List className="h-4 w-4" />
       </Button>
       <Button
+        type="button"
         variant={editor.isActive('orderedList') ? 'default' : 'ghost'}
         size="sm"
         onClick={() => editor.chain().focus().toggleOrderedList().run()}
@@ -125,6 +134,7 @@ const MenuBar = ({ editor }: { editor: Editor | null }) => {
 
       {/* Otros formatos */}
       <Button
+        type="button"
         variant={editor.isActive('blockquote') ? 'default' : 'ghost'}
         size="sm"
         onClick={() => editor.chain().focus().toggleBlockquote().run()}
@@ -132,6 +142,7 @@ const MenuBar = ({ editor }: { editor: Editor | null }) => {
         <Quote className="h-4 w-4" />
       </Button>
       <Button
+        type="button"
         variant={editor.isActive('codeBlock') ? 'default' : 'ghost'}
         size="sm"
         onClick={() => editor.chain().focus().toggleCodeBlock().run()}
@@ -139,6 +150,7 @@ const MenuBar = ({ editor }: { editor: Editor | null }) => {
         <Code className="h-4 w-4" />
       </Button>
       <Button
+        type="button"
         variant={editor.isActive('highlight') ? 'default' : 'ghost'}
         size="sm"
         onClick={() => editor.chain().focus().toggleHighlight().run()}

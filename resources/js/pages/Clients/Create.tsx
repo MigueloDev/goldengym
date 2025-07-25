@@ -380,34 +380,36 @@ export default function CreateClient({ pathologies }: Props) {
                             </div>
 
                             {selectedPathologies.length > 0 && (
-                                <div className="space-y-3">
+                                <div className="space-y-3 grid grid-cols-1 gap-4">
                                     <Label>Patologías seleccionadas</Label>
-                                    {selectedPathologies.map((pathology) => (
-                                        <div key={pathology.id} className="flex items-start space-x-3 p-3 border rounded-lg">
-                                            <div className="flex-1 space-y-2">
-                                                <div className="flex items-center justify-between">
-                                                    <Badge variant="outline">{pathology.name}</Badge>
-                                                    <Button
-                                                        type="button"
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={() => removePathology(pathology.id)}
-                                                    >
-                                                        <X className="h-4 w-4" />
-                                                    </Button>
-                                                </div>
-                                                <div className="space-y-1">
-                                                    <Label className="text-sm">Notas específicas</Label>
-                                                    <Textarea
-                                                        value={pathology.notes}
-                                                        onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => updatePathologyNotes(pathology.id, e.target.value)}
-                                                        placeholder="Notas sobre esta patología..."
-                                                        rows={2}
-                                                    />
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
+                                    <div className="grid grid-cols-5 gap-4">
+                                      {selectedPathologies.map((pathology) => (
+                                          <div key={pathology.id} className="flex items-start space-x-3 p-3 border rounded-lg">
+                                              <div className="flex-1 space-y-2">
+                                                  <div className="flex items-center justify-between">
+                                                      <Badge variant="outline">{pathology.name}</Badge>
+                                                      <Button
+                                                          type="button"
+                                                          variant="ghost"
+                                                          size="sm"
+                                                          onClick={() => removePathology(pathology.id)}
+                                                      >
+                                                          <X className="h-4 w-4" />
+                                                      </Button>
+                                                  </div>
+                                                  <div className="space-y-1">
+                                                      <Label className="text-sm">Notas específicas</Label>
+                                                      <Textarea
+                                                          value={pathology.notes}
+                                                          onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => updatePathologyNotes(pathology.id, e.target.value)}
+                                                          placeholder="Notas sobre esta patología..."
+                                                          rows={2}
+                                                      />
+                                                  </div>
+                                              </div>
+                                          </div>
+                                      ))}
+                                    </div>
                                 </div>
                             )}
                         </CardContent>
