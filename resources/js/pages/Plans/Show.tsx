@@ -162,7 +162,7 @@ export default function ShowPlan({ plan }: Props) {
                                     <div className="p-4 border rounded-lg">
                                         <div className="flex items-center space-x-2 mb-2">
                                             <CreditCard className="h-5 w-5 text-blue-600" />
-                                            <h4 className="font-semibold">Precio en VES</h4>
+                                            <h4 className="font-semibold">Precio en USD (si paga en bolívares)</h4>
                                         </div>
                                         <div className="text-2xl font-bold text-blue-600">
                                             {formatPrice(plan.price, 'USD')}

@@ -61,6 +61,11 @@ class Membership extends Model
         return $query->where('status', 'active');
     }
 
+    public function processedBy()
+    {
+        return $this->belongsTo(User::class, 'processed_by');
+    }
+
     public function scopeExpired($query)
     {
         return $query->where('end_date', '<', now());

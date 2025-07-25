@@ -36,7 +36,7 @@ interface Renewal {
   new_end_date: string;
   amount_paid: number;
   currency: string;
-  processed_by: {
+  processedBy: {
     id: number;
     name: string;
   };
@@ -306,8 +306,56 @@ export default function MembershipShow({ membership }: Props) {
                         <div className="text-sm text-muted-foreground">
                           <div>Período anterior: {formatDate(renewal.previous_end_date)}</div>
                           <div>Nuevo período: {formatDate(renewal.new_end_date)}</div>
-                          <div>Procesado por: {renewal.processed_by.name}</div>
+                          <div>Procesado por: {renewal.processedBy.name}</div>
                         </div>
+
+                        {/* Pagos de la renovación */}
+                        {renewal.payments && renewal.payments.length > 0 && (
+                          <div className="mt-3 border-t pt-3">
+                            <Label className="text-xs font-medium">Pagos de la renovación:</Label>
+                            <div className="space-y-2 mt-2">
+                              {renewal.payments.map((payment) => (
+                                <div key={payment.id} className="bg-gray-50 p-2 rounded-md">
+                                  <div className="flex justify-between items-center">
+                                    <div>
+                                      <span className="text-sm font-medium">
+                                        {formatCurrency(payment.amount, payment.currency)}
+                                      </span>
+                                      <div className="text-xs text-muted-foreground">
+                                        {getPaymentMethodLabel(payment.payment_method)}
+                                        {payment.reference && ` - ${payment.reference}`}
+                                      </div>
+                                    </div>
+                                    <div className="text-right text-xs text-muted-foreground">
+                                      {formatDate(payment.payment_date)}
+                                    </div>
+                                  </div>
+
+                                  {/* Evidencias de pago */}
+                                  {payment.payment_evidences && payment.payment_evidences.length > 0 && (
+                                    <div className="mt-1 border-t border-gray-100 pt-1">
+                                      <Label className="text-xs font-medium">Evidencias:</Label>
+                                      <ul className="list-disc ml-4 mt-1">
+                                        {payment.payment_evidences.map((evidence) => (
+                                          <li key={evidence.id}>
+                                            <a
+                                              href={evidence.url}
+                                              target="_blank"
+                                              rel="noopener noreferrer"
+                                              className="text-blue-600 underline text-xs"
+                                            >
+                                              {evidence.name}
+                                            </a>
+                                          </li>
+                                        ))}
+                                      </ul>
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>

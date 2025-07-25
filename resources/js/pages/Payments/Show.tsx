@@ -121,7 +121,7 @@ export default function ShowPayment({ payment }: Props) {
 
     return (
         <AppLayout breadcrumbs={paymentsBreadcrumbs.show(payment.id)}>
-            <Head title={`Pago - ${payment.membership.client.name}`} />
+            <Head title={`Pago - ${payment.payable.client.name}`} />
             <div className="flex h-full flex-1 flex-col gap-6 p-6">
                 <div className="space-y-6">
                 {/* Header */}
@@ -258,7 +258,7 @@ export default function ShowPayment({ payment }: Props) {
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2">
                                     <CreditCard className="h-5 w-5" />
-                                    Información de la Membresía
+                                    Pago de {payment.payable_type === 'App\\Models\\MembershipRenewal' ? 'Renovación' : 'Membresía'}
                                 </CardTitle>
                             </CardHeader>
                             <CardContent className="space-y-4">
@@ -267,42 +267,41 @@ export default function ShowPayment({ payment }: Props) {
                                         <h4 className="font-semibold mb-2">Cliente</h4>
                                         <div className="flex items-center gap-2">
                                             <User className="h-4 w-4 text-muted-foreground" />
-                                            <span>{payment.membership.client.name}</span>
+                                            <span>{payment.payable.client.name}</span>
                                         </div>
-                                        {payment.membership.client.email && (
+                                        {payment.payable.client.email && (
                                             <p className="text-sm text-muted-foreground mt-1">
-                                                {payment.membership.client.email}
+                                                {payment.payable.client.email}
                                             </p>
                                         )}
                                     </div>
                                     <div>
                                         <h4 className="font-semibold mb-2">Plan</h4>
                                         <p className="text-sm text-muted-foreground">
-                                            {payment.membership.plan.name}
+                                            {payment.payable.plan.name}
                                         </p>
                                         <p className="text-xs text-muted-foreground">
-                                            Precio: {formatCurrency(payment.membership.plan.price, payment.membership.currency)}
+                                            Precio: {formatCurrency(payment.payable.plan.price, payment.payable.currency)}
                                         </p>
                                     </div>
                                 </div>
-
                                 <div className="grid gap-4 md:grid-cols-3">
                                     <div>
                                         <h4 className="font-semibold mb-2">Estado</h4>
-                                        {getStatusBadge(payment.membership.status)}
+                                        {getStatusBadge(payment.payable.status)}
                                     </div>
                                     <div>
                                         <h4 className="font-semibold mb-2">Fecha de Inicio</h4>
                                         <div className="flex items-center gap-2">
                                             <Calendar className="h-4 w-4 text-muted-foreground" />
-                                            <span className="text-sm">{formatDate(payment.membership.start_date)}</span>
+                                            <span className="text-sm">{formatDate(payment.payable.start_date)}</span>
                                         </div>
                                     </div>
                                     <div>
                                         <h4 className="font-semibold mb-2">Fecha de Fin</h4>
                                         <div className="flex items-center gap-2">
                                             <Calendar className="h-4 w-4 text-muted-foreground" />
-                                            <span className="text-sm">{formatDate(payment.membership.end_date)}</span>
+                                            <span className="text-sm">{formatDate(payment.payable.end_date)}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -311,13 +310,13 @@ export default function ShowPayment({ payment }: Props) {
                                     <div>
                                         <h4 className="font-semibold mb-2">Monto Pagado</h4>
                                         <p className="text-lg font-medium">
-                                            {formatCurrency(payment.membership.amount_paid, payment.membership.currency)}
+                                            {formatCurrency(payment.payable.amount_paid, payment.payable.currency)}
                                         </p>
                                     </div>
                                     <div>
                                         <h4 className="font-semibold mb-2">Moneda</h4>
                                         <p className="text-sm text-muted-foreground">
-                                            {payment.membership.currency.toUpperCase()}
+                                            {payment.payable.currency.toUpperCase()}
                                         </p>
                                     </div>
                                 </div>
@@ -360,13 +359,27 @@ export default function ShowPayment({ payment }: Props) {
                                         Editar Pago
                                     </Button>
                                 </Link>
-                                <Link href={`/memberships/${payment.membership.id}`}>
-                                    <Button variant="outline" size="sm" className="w-full">
-                                        <CreditCard className="mr-2 h-4 w-4" />
-                                        Ver Membresía
-                                    </Button>
-                                </Link>
-                                <Link href={`/clients/${payment.membership.client.id}`}>
+                                {
+                                  payment.payable_type === 'App\Models\MembershipRenewal' && (
+                                    <Link href={`/memberships/${payment.payable.membership.id}`}>
+                                        <Button variant="outline" size="sm" className="w-full">
+                                            <CreditCard className="mr-2 h-4 w-4" />
+                                            Ver Membresía
+                                        </Button>
+                                    </Link>
+                                  )
+                                }
+                                {
+                                  payment.payable_type === 'App\Models\Membership' && (
+                                    <Link href={`/memberships/${payment.payable.id}`}>
+                                        <Button variant="outline" size="sm" className="w-full">
+                                            <CreditCard className="mr-2 h-4 w-4" />
+                                            Ver Membresía
+                                        </Button>
+                                    </Link>
+                                  )
+                                }
+                                <Link href={`/clients/${payment.payable.client.id}`}>
                                     <Button variant="outline" size="sm" className="w-full">
                                         <User className="mr-2 h-4 w-4" />
                                         Ver Cliente

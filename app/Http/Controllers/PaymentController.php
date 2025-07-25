@@ -6,7 +6,6 @@ use App\Models\Payment;
 use App\Models\Membership;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
-
 class PaymentController extends Controller
 {
     /**
@@ -269,7 +268,7 @@ class PaymentController extends Controller
      */
     public function show(Payment $payment)
     {
-        $payment->load(['payable', 'registeredBy', 'paymentEvidences']);
+        $payment->load(['payable.client', 'payable.plan', 'registeredBy', 'paymentEvidences']);
 
         return Inertia::render('Payments/Show', [
             'payment' => $payment,
