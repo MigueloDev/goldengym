@@ -408,6 +408,12 @@ export default function ClientsIndex({ clients, filters, stats, documentTemplate
                                                 </Button>
                                             }
                                         />
+                                        <Link href={`/clients/${client.id}/documents`}>
+                                            <Button variant="outline" size="sm">
+                                                <FileText className="h-4 w-4" />
+                                                Ver Documentos
+                                            </Button>
+                                        </Link>
                                         <Link href={`/clients/${client.id}`}>
                                             <Button variant="outline" size="sm">
                                                 <Eye className="h-4 w-4" />
