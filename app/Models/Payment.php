@@ -110,7 +110,11 @@ class Payment extends Model
 
     public function addPaymentEvidence($file)
     {
-        $path = $file->store('payments/evidences', 'public');
+        if (env('APP_ENV') === 'local') {
+            $path = $file->store('payments/evidences', 'public');
+        } else {
+            $path = $file->store('payments/evidences', 's3');
+        }
 
         return $this->paymentEvidences()->create([
             'name' => $file->getClientOriginalName(),

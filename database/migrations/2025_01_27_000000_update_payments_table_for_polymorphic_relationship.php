@@ -24,7 +24,7 @@ return new class extends Migration
         DB::statement("
             UPDATE payments
             SET payable_id = membership_id,
-                payable_type = 'App\\\\Models\\\\Membership'
+                payable_type = 'App\\Models\\Membership'
             WHERE membership_id IS NOT NULL
         ");
 
@@ -50,7 +50,7 @@ return new class extends Migration
         DB::statement("
             UPDATE payments
             SET membership_id = payable_id
-            WHERE payable_type = 'App\\\\Models\\\\Membership'
+            WHERE payable_type = 'App\\Models\\Membership'
         ");
 
         Schema::table('payments', function (Blueprint $table) {
