@@ -27,7 +27,7 @@ class MembershipController extends Controller
         // Filtros
         if ($request->filled('search')) {
             $query->whereHas('client', function ($q) use ($request) {
-                $q->where('name', 'like', '%' . $request->search . '%');
+                $q->where('name', 'ilike', '%' . $request->search . '%');
             });
         }
 
@@ -228,11 +228,11 @@ class MembershipController extends Controller
         DB::beginTransaction();
         try {
 
-        if (MembershipRenewal::hasRecentRenewal($membership->id)) {
+/*         if (MembershipRenewal::hasRecentRenewal($membership->id)) {
             return back()->withErrors([
                 'membership' => 'Esta membresía ya ha sido renovada recientemente. No se puede renovar nuevamente en las próximas 24 horas.'
             ]);
-        }
+        } */
 
         $validated = $request->validate([
             'plan_id' => 'required|exists:plans,id',
@@ -354,7 +354,12 @@ class MembershipController extends Controller
 
     public function show(Membership $membership)
     {
-        $membership->load(['client', 'plan', 'payments.paymentEvidences', 'renewals']);
+        $membership->load([
+            'client',
+            'plan',
+            'payments.paymentEvidences',
+            'renewals.payments.paymentEvidences'
+        ]);
 
         return Inertia::render('Memberships/Show', [
             'membership' => $membership,

@@ -35,6 +35,11 @@ class MembershipRenewal extends Model
         return $this->hasOneThrough(Client::class, Membership::class, 'id', 'id', 'membership_id', 'client_id');
     }
 
+    public function plan()
+    {
+        return $this->hasOneThrough(Plan::class, Membership::class, 'id', 'id', 'membership_id', 'plan_id');
+    }
+
     public function payments()
     {
         return $this->morphMany(Payment::class, 'payable');

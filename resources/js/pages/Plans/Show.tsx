@@ -165,7 +165,7 @@ export default function ShowPlan({ plan }: Props) {
                                             <h4 className="font-semibold">Precio en VES</h4>
                                         </div>
                                         <div className="text-2xl font-bold text-blue-600">
-                                            {formatPrice(plan.price)}
+                                            {formatPrice(plan.price, 'USD')}
                                         </div>
                                         {plan.price > plan.price_usd && (
                                             <Badge variant="outline" className="mt-2">

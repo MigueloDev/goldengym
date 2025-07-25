@@ -145,7 +145,8 @@ export default function Dashboard({ stats, expiring_memberships, recent_payments
                         <div className="flex items-center justify-between mb-3">
                             <div>
                                 <p className="text-sm font-medium text-golden-foreground">Ingresos del Mes</p>
-                                <p className="text-2xl font-bold text-golden">{formatCurrency(stats.monthly_revenue, 'usd')}</p>
+                                <p className="text-2xl font-bold text-golden">{formatCurrency(stats.monthly_revenue_usd, 'usd')}</p>
+                                <p className="text-2xl font-bold text-golden">{formatCurrency(stats.monthly_revenue_local, 'local')}</p>
                             </div>
                             <BarChart3 className="h-8 w-8 text-golden" />
                         </div>

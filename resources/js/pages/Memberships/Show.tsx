@@ -41,6 +41,7 @@ interface Renewal {
     name: string;
   };
   created_at: string;
+  payments?: Payment[];
 }
 
 interface Membership {
