@@ -9,6 +9,13 @@ import { Label } from '@/components/ui/label';
 import { membershipsBreadcrumbs } from '@/lib/breadcrumbs';
 import AppLayout from '@/layouts/app-layout';
 
+interface PaymentEvidence {
+  id: number;
+  name: string;
+  url: string;
+  mime_type: string;
+}
+
 interface Payment {
   id: number;
   amount: number;
@@ -20,6 +27,7 @@ interface Payment {
     id: number;
     name: string;
   };
+  payment_evidences?: PaymentEvidence[];
 }
 
 interface Renewal {
@@ -72,7 +80,7 @@ interface Props {
 
 export default function MembershipShow({ membership }: Props) {
   const formatCurrency = (amount: number, currency: string) => {
-    const symbol = currency === 'usd' ? '$' : '₡';
+    const symbol = currency === 'usd' ? '$' : 'Bs ';
     return `${symbol}${amount.toLocaleString()}`;
   };
 
@@ -224,22 +232,46 @@ export default function MembershipShow({ membership }: Props) {
                 {membership.payments.length > 0 ? (
                   <div className="space-y-3">
                     {membership.payments.map((payment) => (
-                      <div key={payment.id} className="flex items-center justify-between p-3 border rounded-lg">
-                        <div>
-                          <div className="font-medium">
-                            {formatCurrency(payment.amount, payment.currency)}
+                      <div key={payment.id} className="flex flex-col gap-2 p-3 border rounded-lg">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="font-medium">
+                              {formatCurrency(payment.amount, payment.currency)}
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              {getPaymentMethodLabel(payment.payment_method)}
+                              {payment.reference && ` - ${payment.reference}`}
+                            </div>
                           </div>
-                          <div className="text-sm text-muted-foreground">
-                            {getPaymentMethodLabel(payment.payment_method)}
-                            {payment.reference && ` - ${payment.reference}`}
+                          <div className="text-right">
+                            <div className="text-sm">{formatDate(payment.payment_date)}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {payment.registered_by.name}
+                            </div>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <div className="text-sm">{formatDate(payment.payment_date)}</div>
-                          <div className="text-xs text-muted-foreground">
-                            {payment.registered_by.name}
+                        {/* Evidencias de pago */}
+                        {payment.payment_evidences && payment.payment_evidences.length > 0 && (
+                          <div className="mt-2">
+                            <Label className="text-xs font-medium">Evidencias de pago:</Label>
+                            <ul className="list-disc ml-4 mt-1">
+                              {payment.payment_evidences.map((evidence) => (
+                                <div >
+                                <li key={evidence.id}>
+                                  <a
+                                    href={evidence.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-blue-600 underline text-xs"
+                                    >
+                                    {evidence.name}
+                                  </a>
+                                </li>
+                                </div>
+                              ))}
+                            </ul>
                           </div>
-                        </div>
+                        )}
                       </div>
                     ))}
                   </div>

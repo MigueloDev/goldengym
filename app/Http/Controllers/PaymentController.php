@@ -14,12 +14,17 @@ class PaymentController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Payment::with(['membership.client', 'membership.plan', 'registeredBy', 'paymentEvidences']);
+
+        $query = Payment::with(['payable.client', 'payable.plan', 'registeredBy', 'paymentEvidences']);
 
         // Filtros
         if ($request->filled('search')) {
-            $query->whereHas('membership.client', function ($q) use ($request) {
-                $q->where('name', 'like', '%' . $request->search . '%');
+            $query->where(function ($q) use ($request) {
+                $q->whereHas('payable', function ($subQ) use ($request) {
+                    $subQ->whereHas('client', function ($clientQ) use ($request) {
+                        $clientQ->where('name', 'like', '%' . $request->search . '%');
+                    });
+                });
             });
         }
 
@@ -115,13 +120,14 @@ class PaymentController extends Controller
         ]);
     }
 
-        /**
+    /**
      * Store a newly created resource in storage.
      */
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'membership_id' => 'required|exists:memberships,id',
+            'payable_id' => 'required|integer',
+            'payable_type' => 'required|in:App\\Models\\Membership,App\\Models\\MembershipRenewal',
             'currency' => 'required|in:local,usd',
             'exchange_rate' => 'nullable|numeric|min:0',
             'selected_price' => 'required|numeric|min:0',
@@ -174,8 +180,13 @@ class PaymentController extends Controller
             return back()->withErrors(['payment_methods' => 'El monto total debe ser mayor a 0.']);
         }
 
-        // Obtener la membresía
-        $membership = Membership::find($validated['membership_id']);
+        // Obtener el objeto pagable (membership o renewal)
+        $payableClass = $validated['payable_type'];
+        $payable = $payableClass::find($validated['payable_id']);
+
+        if (!$payable) {
+            return back()->withErrors(['payable_id' => 'El objeto especificado no existe.']);
+        }
 
         // Crear múltiples pagos (uno por cada método)
         $payments = [];
@@ -191,7 +202,8 @@ class PaymentController extends Controller
             }
 
             $payment = Payment::create([
-                'membership_id' => $validated['membership_id'],
+                'payable_id' => $validated['payable_id'],
+                'payable_type' => $validated['payable_type'],
                 'amount' => $amount,
                 'currency' => isset($method['type']) ? ($method['type'] === 'usd' ? 'usd' : 'local') : $validated['currency'],
                 'exchange_rate' => $validated['exchange_rate'] ?? 1,
@@ -216,28 +228,34 @@ class PaymentController extends Controller
 
         // Calcular el monto adeudado basado en el precio seleccionado
         $selectedPrice = floatval($validated['selected_price']);
-        $totalPaid = $membership->payments()->sum('amount');
+        $totalPaid = $payable->payments()->sum('amount');
         $remainingAmount = $selectedPrice - $totalPaid;
 
-        // Si el pago cubre o excede la deuda restante, renovar la membresía
-        if ($totalAmount >= $remainingAmount) {
+        // Si es una membresía y el pago cubre o excede la deuda restante, renovar la membresía
+        if ($payable instanceof \App\Models\Membership && $totalAmount >= $remainingAmount) {
             // Calcular nueva fecha de fin
-            $newEndDate = \Carbon\Carbon::parse($membership->end_date)
-                ->addDays($membership->plan->renewal_period_days);
+            $newEndDate = \Carbon\Carbon::parse($payable->end_date)
+                ->addDays($payable->plan->renewal_period_days);
 
             // Actualizar la membresía
-            $membership->update([
+            $payable->update([
                 'end_date' => $newEndDate,
                 'status' => 'active', // Asegurar que esté activa
             ]);
 
-            // Crear registro de renovación (usar el primer pago como referencia)
-            $membership->renewals()->create([
-                'payment_id' => $payments[0]->id,
-                'renewal_date' => now(),
-                'previous_end_date' => $membership->getOriginal('end_date'),
+            // Crear registro de renovación
+            $renewal = $payable->renewals()->create([
+                'previous_end_date' => $payable->getOriginal('end_date'),
                 'new_end_date' => $newEndDate,
-                'renewal_period_days' => $membership->plan->renewal_period_days,
+                'amount_paid' => $totalAmount,
+                'currency' => $validated['currency'],
+                'processed_by' => auth()->id(),
+            ]);
+
+            // Asignar el primer pago a la renovación
+            $payments[0]->update([
+                'payable_id' => $renewal->id,
+                'payable_type' => \App\Models\MembershipRenewal::class,
             ]);
         }
 
@@ -251,7 +269,7 @@ class PaymentController extends Controller
      */
     public function show(Payment $payment)
     {
-        $payment->load(['membership.client', 'membership.plan', 'registeredBy', 'paymentEvidences']);
+        $payment->load(['payable', 'registeredBy', 'paymentEvidences']);
 
         return Inertia::render('Payments/Show', [
             'payment' => $payment,
@@ -263,7 +281,7 @@ class PaymentController extends Controller
      */
     public function edit(Payment $payment)
     {
-        $payment->load(['membership.client', 'membership.plan', 'paymentEvidences']);
+        $payment->load(['payable', 'paymentEvidences']);
 
         return Inertia::render('Payments/Edit', [
             'payment' => $payment,

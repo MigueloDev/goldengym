@@ -327,9 +327,13 @@ export default function PaymentsIndex({ payments, filters, stats }: Props) {
                                 {payments.data.map((payment) => (
                                     <TableRow key={payment.id}>
                                         <TableCell className="font-medium">
-                                            {payment.membership.client.name}
+                                          {payment.payable.client?.name}
                                         </TableCell>
-                                        <TableCell>{payment.membership.plan.name}</TableCell>
+                                        <TableCell>
+                                          <Badge variant="golden">
+                                            {payment.payable.plan.name}
+                                          </Badge>
+                                        </TableCell>
                                         <TableCell>
                                             <div className="font-medium">
                                                 {formatCurrency(payment.amount, payment.currency)}

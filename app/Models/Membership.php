@@ -47,7 +47,7 @@ class Membership extends Model
 
     public function payments()
     {
-        return $this->hasMany(Payment::class);
+        return $this->morphMany(Payment::class, 'payable');
     }
 
     public function renewals()

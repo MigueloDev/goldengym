@@ -15,7 +15,6 @@ class MembershipRenewal extends Model
         'new_end_date',
         'amount_paid',
         'currency',
-        'payment_id',
         'processed_by',
     ];
 
@@ -31,9 +30,14 @@ class MembershipRenewal extends Model
         return $this->belongsTo(Membership::class);
     }
 
-    public function payment()
+    public function client()
     {
-        return $this->belongsTo(Payment::class);
+        return $this->hasOneThrough(Client::class, Membership::class, 'id', 'id', 'membership_id', 'client_id');
+    }
+
+    public function payments()
+    {
+        return $this->morphMany(Payment::class, 'payable');
     }
 
     public function processedBy()

@@ -103,7 +103,6 @@ export default function PlansIndex({ plans, filters, stats }: Props) {
             <Head title="Planes" />
             <div className="flex h-full flex-1 flex-col gap-6 p-6">
                 <div className="space-y-6">
-                {/* Header */}
                 <div className="flex items-center justify-between">
                     <div>
                         <h1 className="text-3xl font-bold tracking-tight">Planes</h1>
@@ -119,7 +118,6 @@ export default function PlansIndex({ plans, filters, stats }: Props) {
                     </Link>
                 </div>
 
-                {/* Stats Cards */}
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                     <Card className='gap-1 h-18 py-2 border-golden/20 bg-golden/5'>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0">
@@ -159,7 +157,6 @@ export default function PlansIndex({ plans, filters, stats }: Props) {
                     </Card>
                 </div>
 
-                {/* Filters */}
                 <Card className="gap-1">
                     <CardHeader>
                         <CardTitle className="flex items-center">
@@ -231,7 +228,6 @@ export default function PlansIndex({ plans, filters, stats }: Props) {
                     </CardContent>
                 </Card>
 
-                {/* Plans List */}
                 <div className="grid gap-4">
                     {plans.data.map((plan) => (
                         <Card key={plan.id} className="hover:shadow-md transition-shadow py-2">
@@ -325,7 +321,6 @@ export default function PlansIndex({ plans, filters, stats }: Props) {
                     ))}
                 </div>
 
-                {/* Pagination */}
                 {plans.last_page > 1 && (
                     <div className="flex justify-center">
                         <Pagination

@@ -175,7 +175,7 @@ export default function Dashboard({ stats, expiring_memberships, recent_payments
                                     {recent_payments.map((payment) => (
                                         <div key={payment.id} className="flex items-center justify-between p-2 border rounded-lg bg-white/50">
                                             <div>
-                                                <h4 className="font-medium text-sm">{payment.membership.client.name}</h4>
+                                                <h4 className="font-medium text-sm">{payment.payable.client.name}</h4>
                                                 <p className="text-xs text-muted-foreground">
                                                     {formatCurrency(parseFloat(payment.amount?.toString() ?? '0'), payment.currency)}
                                                 </p>

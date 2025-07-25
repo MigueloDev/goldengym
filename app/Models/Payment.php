@@ -10,7 +10,8 @@ class Payment extends Model
     use HasFactory;
 
     protected $fillable = [
-        'membership_id',
+        'payable_id',
+        'payable_type',
         'amount',
         'currency',
         'exchange_rate',
@@ -35,16 +36,24 @@ class Payment extends Model
         return $this->morphOne(File::class, 'fileable');
     }
 
-    // Evidencias de pago (múltiples archivos)
     public function paymentEvidences()
     {
         return $this->morphMany(File::class, 'fileable')->where('type', 'payment_evidence');
     }
 
-    // Relaciones
+    public function payable()
+    {
+        return $this->morphTo();
+    }
+
     public function membership()
     {
-        return $this->belongsTo(Membership::class);
+        return $this->belongsTo(Membership::class, 'payable_id')->where('payable_type', Membership::class);
+    }
+
+    public function membershipRenewal()
+    {
+        return $this->belongsTo(MembershipRenewal::class, 'payable_id')->where('payable_type', MembershipRenewal::class);
     }
 
     public function registeredBy()
@@ -52,9 +61,20 @@ class Payment extends Model
         return $this->belongsTo(User::class, 'registered_by');
     }
 
-    public function renewal()
+    // Métodos auxiliares para determinar el tipo de pago
+    public function isMembershipPayment()
     {
-        return $this->hasOne(MembershipRenewal::class);
+        return $this->payable_type === Membership::class;
+    }
+
+    public function isRenewalPayment()
+    {
+        return $this->payable_type === MembershipRenewal::class;
+    }
+
+    public function getPaymentTypeLabel()
+    {
+        return $this->isMembershipPayment() ? 'Membresía Nueva' : 'Renovación';
     }
 
     // Scopes

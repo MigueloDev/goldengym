@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Icon } from '@/components/icon';
 import Heading from '@/components/heading';
-import { ArrowLeft, RefreshCw, Calendar } from 'lucide-react';
+import { ArrowLeft, RefreshCw, Calendar, DollarSign } from 'lucide-react';
 import AppLayout from '@/layouts/app-layout';
 import { membershipsBreadcrumbs } from '@/lib/breadcrumbs';
 import PaymentMethodsForm from '@/components/payment-methods-form';
@@ -144,72 +144,77 @@ export default function QuickRenew({ membership, plans }: Props) {
             )}
           </div>
         </div>
-
-        {/* Información Actual */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Membresía Actual</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label className="text-sm font-medium">Cliente</Label>
-                <p className="text-lg font-semibold">{membership.client.name}</p>
-                <p className="text-sm text-muted-foreground">{membership.client.email}</p>
-              </div>
-              <div>
-                <Label className="text-sm font-medium">Estado</Label>
-                <div className="flex items-center gap-2">
-                  <Badge variant={membership.status === 'active' ? 'default' : 'secondary'}>
-                    {membership.status}
-                  </Badge>
-                </div>
-              </div>
-              <div>
-                <Label className="text-sm font-medium">Plan Actual</Label>
-                <p className="text-lg font-semibold">{membership.plan.name}</p>
-                <p className="text-sm text-muted-foreground">
-                  {formatCurrency(membership.plan.price, membership.currency)}
-                </p>
-              </div>
-              <div>
-                <Label className="text-sm font-medium">Período Actual</Label>
-                <p className="text-sm">
-                  {formatDate(membership.start_date)} - {formatDate(membership.end_date)}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
         <form onSubmit={handleSubmit} className="space-y-2">
-          {/* Nueva Membresía */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Icon iconNode={Calendar} className="h-5 w-5" />
-                Nueva Membresía
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="plan_id">Plan *</Label>
-                <Select value={data.plan_id} onValueChange={(value) => setData('plan_id', value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar plan..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {plans.map((plan) => (
-                      <SelectItem key={plan.id} value={plan.id.toString()}>
-                        {plan.name} - {formatCurrency(plan.price, data.payment_currency)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {errors.plan_id && <p className="text-sm text-red-600">{errors.plan_id}</p>}
-              </div>
-            </CardContent>
-          </Card>
+        <div className="grid grid-cols-2 gap-4">
+
+          <div className="grid grid-cols-1 gap-4">
+            <Card className='gap-1'>
+              <CardHeader>
+                <CardTitle>Membresía Actual</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-sm font-medium">Cliente</Label>
+                    <p className="text-lg font-semibold">{membership.client.name}</p>
+                    <p className="text-sm text-muted-foreground">{membership.client.email}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium">Estado</Label>
+                    <div className="flex items-center gap-2">
+                      <Badge variant={membership.status === 'active' ? 'golden' : 'secondary'}>
+                        {membership.status === 'active' ? 'Activo' : 'Inactivo'}
+                      </Badge>
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium">Plan Actual</Label>
+                    <p className="text-lg font-semibold">{membership.plan.name}</p>
+                    <p className="text-sm font-semibold flex items-center gap-2">
+                      <Badge variant="golden" className='text-sm'>
+                        {formatCurrency(membership.plan.price, 'usd')}
+                      </Badge>
+                    </p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium">Período Actual</Label>
+                    <p className="text-sm">
+                      {formatDate(membership.start_date)} - {formatDate(membership.end_date)}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+          <div className="grid grid-cols-1 gap-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Icon iconNode={Calendar} className="h-5 w-5" />
+                  Nueva Membresía
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label htmlFor="plan_id">Plan *</Label>
+                  <Select value={data.plan_id} onValueChange={(value) => setData('plan_id', value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar plan..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {plans.map((plan) => (
+                        <SelectItem key={plan.id} value={plan.id.toString()}>
+                          {plan.name} - {formatCurrency(plan.price, data.payment_currency)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors.plan_id && <p className="text-sm text-red-600">{errors.plan_id}</p>}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
 
           <PaymentMethodsForm
             paymentCurrency={data.payment_currency as 'local' | 'usd'}

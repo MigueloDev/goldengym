@@ -182,7 +182,8 @@ class MembershipController extends Controller
                 }
 
                 $payment = Payment::create([
-                    'membership_id' => $membership->id,
+                    'payable_id' => $membership->id,
+                    'payable_type' => \App\Models\Membership::class,
                     'amount' => $amount,
                     'currency' => $method['type'] === 'usd' ? 'usd' : 'local',
                     'payment_date' => now(),
@@ -308,7 +309,6 @@ class MembershipController extends Controller
             }
 
             $payment = Payment::create([
-                'membership_id' => $membership->id,
                 'amount' => $amount,
                 'currency' => isset($method['type']) ? ($method['type'] === 'usd' ? 'usd' : 'local') : $validated['payment_currency'],
                 'payment_date' => now(),
@@ -317,6 +317,8 @@ class MembershipController extends Controller
                 'notes' => $method['notes'] ?? null,
                 'registered_by' => auth()->id(),
                 'exchange_rate' => $validated['exchange_rate'] ?? 1,
+                'payable_id' => $membership->id,
+                'payable_type' => \App\Models\MembershipRenewal::class,
             ]);
 
             $payments[] = $payment;
@@ -352,7 +354,7 @@ class MembershipController extends Controller
 
     public function show(Membership $membership)
     {
-        $membership->load(['client', 'plan', 'payments', 'renewals']);
+        $membership->load(['client', 'plan', 'payments.paymentEvidences', 'renewals']);
 
         return Inertia::render('Memberships/Show', [
             'membership' => $membership,

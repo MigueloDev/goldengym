@@ -331,9 +331,9 @@ class ClientController extends Controller
         $search = $request->get('query', '');
 
         $clients = Client::where(function ($query) use ($search) {
-            $query->where('name', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%")
-                  ->orWhere('identification_number', 'like', "%{$search}%");
+            $query->where('name', 'ilike', "%{$search}%")
+                  ->orWhere('email', 'ilike', "%{$search}%")
+                  ->orWhere('identification_number', 'ilike', "%{$search}%");
         })
         ->where('status', 'active')
         ->limit(10)

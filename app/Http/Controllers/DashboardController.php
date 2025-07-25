@@ -29,7 +29,7 @@ class DashboardController extends Controller
                 ->orderBy('end_date')
                 ->limit(10)
                 ->get(),
-            'recent_payments' => Payment::with(['membership.client'])
+            'recent_payments' => Payment::with(['payable.client'])
                 ->orderBy('payment_date', 'desc')
                 ->limit(5)
                 ->get(),
