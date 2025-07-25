@@ -128,7 +128,6 @@ export default function PaymentsIndex({ payments, filters, stats }: Props) {
     };
 
     const getPaymentMethodBadge = (payment: Payment) => {
-        console.log(payment);
         return <Badge className={payment.method_color}>{payment.method_label}</Badge>;
     };
 
