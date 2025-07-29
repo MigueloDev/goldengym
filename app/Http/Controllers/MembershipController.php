@@ -216,12 +216,26 @@ class MembershipController extends Controller
 
     public function quickRenew(Membership $membership)
     {
-        $membership->load(['client', 'plan']);
+        $membership->load(['client', 'plan', 'renewals']);
         $plans = Plan::active()->get();
+
+        // Calcular información de renovación para cada plan
+        $plansWithRenewalInfo = $plans->map(function ($plan) use ($membership) {
+            $renewalInfo = $plan->getRenewalInfo($membership);
+            return [
+                'id' => $plan->id,
+                'name' => $plan->name,
+                'description' => $plan->description,
+                'price' => $plan->price,
+                'price_usd' => $plan->price_usd,
+                'renewal_period_days' => $plan->renewal_period_days,
+                'renewal_info' => $renewalInfo,
+            ];
+        });
 
         return Inertia::render('Memberships/QuickRenew', [
             'membership' => $membership,
-            'plans' => $plans,
+            'plans' => $plansWithRenewalInfo,
         ]);
     }
 
@@ -250,26 +264,34 @@ class MembershipController extends Controller
         if ($request->has('payment_methods_json') && !empty($validated['payment_methods_json'])) {
             $paymentMethods = json_decode($validated['payment_methods_json'], true);
             if (json_last_error() !== JSON_ERROR_NONE) {
-                return back()->withErrors(['payment_methods' => 'Error al procesar los métodos de pago.']);
+                throw ValidationException::withMessages([
+                    'payment_methods' => 'Error al procesar los métodos de pago.',
+                ]);
             }
         } elseif ($request->has('payment_methods')) {
             $paymentMethods = $validated['payment_methods'];
         } else {
-            return back()->withErrors(['payment_methods' => 'Se requieren métodos de pago.']);
+            throw ValidationException::withMessages([
+                'payment_methods' => 'Se requieren métodos de pago.',
+            ]);
         }
 
         $totalAmount = 0;
         foreach ($paymentMethods as $method) {
 
             if (!isset($method['method'])) {
-                return back()->withErrors(['payment_methods' => 'Todos los métodos de pago deben tener un tipo válido.']);
+                throw ValidationException::withMessages([
+                    'payment_methods' => 'Todos los métodos de pago deben tener un tipo válido.',
+                ]);
             }
             $amount = null;
             if (isset($method['type']) && $method['type'] === 'usd' && isset($method['amount_usd']) && !empty($method['amount_usd'])) {
                 $amount = floatval($method['amount_usd']);
             } elseif (isset($method['type']) && $method['type'] === 'bs' && isset($method['amount_bs']) && !empty($method['amount_bs'])) {
                 if (!$request->filled('exchange_rate')) {
-                    return back()->withErrors(['exchange_rate' => 'Se requiere la tasa de cambio para el pago en bolívares.']);
+                    throw ValidationException::withMessages([
+                        'exchange_rate' => 'Se requiere la tasa de cambio para el pago en bolívares.',
+                    ]);
                 }
                 $amount = floatval($method['amount_bs']) * floatval($validated['exchange_rate']);
             } elseif (isset($method['amount']) && !empty($method['amount'])) {
@@ -278,7 +300,9 @@ class MembershipController extends Controller
             }
 
             if ($amount === null || $amount <= 0) {
-                return back()->withErrors(['payment_methods' => 'Todos los métodos de pago deben tener un monto válido.']);
+                throw ValidationException::withMessages([
+                    'payment_methods' => 'Todos los métodos de pago deben tener un monto válido.',
+                ]);
             }
             $totalAmount += $amount;
         }
@@ -286,15 +310,23 @@ class MembershipController extends Controller
 
 
         if ($totalAmount <= 0) {
-            return back()->withErrors(['payment_methods' => 'El monto total debe ser mayor a 0.']);
+            throw ValidationException::withMessages([
+                'payment_methods' => 'El monto total debe ser mayor a 0.',
+            ]);
         }
 
         $plan = Plan::find($validated['plan_id']);
 
+        // Usar la lógica inteligente para calcular la nueva fecha de vencimiento
+        $newEndDate = $plan->calculateSmartRenewalEndDate($membership);
+
+        // Obtener la fecha de vencimiento anterior (última renovación o fecha original)
+        $previousEndDate = $membership->getEffectiveEndDate();
+
         $renewal = MembershipRenewal::create([
             'membership_id' => $membership->id,
-            'previous_end_date' => $membership->end_date,
-            'new_end_date' => $plan->calculateEndDate($membership->end_date),
+            'previous_end_date' => $previousEndDate,
+            'new_end_date' => $newEndDate,
             'amount_paid' => $totalAmount,
             'plan_price_paid' => $plan->price,
             'currency' => $validated['payment_currency'],
@@ -354,7 +386,9 @@ class MembershipController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->withErrors(['error' => 'Error al renovar la membresía: ' . $e->getMessage()]);
+            throw ValidationException::withMessages([
+                'error' => 'Error al renovar la membresía: ' . $e->getMessage(),
+            ]);
         }
     }
 

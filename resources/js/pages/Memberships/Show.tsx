@@ -294,7 +294,7 @@ export default function MembershipShow({ membership }: Props) {
                       <div key={renewal.id} className="p-3 border rounded-lg">
                         <div className="flex items-center justify-between mb-2">
                           <div className="font-medium">
-                            {formatCurrency(renewal.amount_paid, renewal.currency)}
+                            {formatCurrency(renewal.sum_local_payments, 'local')} + {formatCurrency(renewal.sum_usd_payments, 'usd')}
                           </div>
                           <div className="text-sm text-muted-foreground">
                             {formatDate(renewal.created_at)}

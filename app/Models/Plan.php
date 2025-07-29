@@ -58,4 +58,71 @@ class Plan extends Model
         $startDate = $startDate ? Carbon::parse($startDate) : now();
         return $startDate->addDays($this->renewal_period_days);
     }
+
+    /**
+     * Calcula la nueva fecha de vencimiento para una renovación
+     * Si la membresía está vencida, calcula desde hoy
+     * Si no está vencida, calcula desde la fecha de vencimiento actual
+     */
+    public function calculateRenewalEndDate(Membership $membership)
+    {
+        $today = now();
+
+        // Si la membresía está vencida, calcular desde hoy
+        if ($membership->isExpired()) {
+            return $today->addDays($this->renewal_period_days);
+        }
+
+        // Si no está vencida, calcular desde la fecha de vencimiento actual
+        return Carbon::parse($membership->end_date)->addDays($this->renewal_period_days);
+    }
+
+    /**
+     * Obtiene la última renovación de una membresía
+     */
+    public function getLastRenewalDate(Membership $membership)
+    {
+        $lastRenewal = $membership->renewals()
+            ->orderBy('new_end_date', 'desc')
+            ->first();
+
+        return $lastRenewal ? $lastRenewal->new_end_date : $membership->end_date;
+    }
+
+    /**
+     * Calcula la nueva fecha de vencimiento considerando la última renovación
+     */
+    public function calculateSmartRenewalEndDate(Membership $membership)
+    {
+        $today = now();
+        $lastRenewalDate = $this->getLastRenewalDate($membership);
+
+        // Si la última renovación está vencida, calcular desde hoy
+        if ($lastRenewalDate < $today) {
+            return $today->addDays($this->renewal_period_days);
+        }
+
+        // Si no está vencida, calcular desde la fecha de la última renovación
+        return Carbon::parse($lastRenewalDate)->addDays($this->renewal_period_days);
+    }
+
+    /**
+     * Obtiene información detallada sobre el cálculo de renovación
+     */
+    public function getRenewalInfo(Membership $membership)
+    {
+        $today = now();
+        $lastRenewalDate = $this->getLastRenewalDate($membership);
+        $isExpired = $lastRenewalDate < $today;
+        $newEndDate = $this->calculateSmartRenewalEndDate($membership);
+
+        return [
+            'is_expired' => $isExpired,
+            'current_end_date' => $lastRenewalDate->format('Y-m-d'),
+            'new_end_date' => $newEndDate->format('Y-m-d'),
+            'days_added' => $this->renewal_period_days,
+            'calculation_basis' => $isExpired ? 'Desde hoy' : 'Desde fecha de vencimiento actual',
+            'days_until_expiration' => $isExpired ? 0 : (int) $today->diffInDays($lastRenewalDate, false),
+        ];
+    }
 }

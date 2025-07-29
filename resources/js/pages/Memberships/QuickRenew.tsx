@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Icon } from '@/components/icon';
 import Heading from '@/components/heading';
-import { ArrowLeft, RefreshCw, Calendar, DollarSign } from 'lucide-react';
+import { ArrowLeft, RefreshCw, Calendar } from 'lucide-react';
 import AppLayout from '@/layouts/app-layout';
 import { membershipsBreadcrumbs } from '@/lib/breadcrumbs';
 import PaymentMethodsForm from '@/components/payment-methods-form';
@@ -16,13 +16,22 @@ import { bodyToFetch } from '@/helpers';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useToast } from '@/components/ui/toast';
 
+interface RenewalInfo {
+  is_expired: boolean;
+  current_end_date: string;
+  new_end_date: string;
+  days_added: number;
+  calculation_basis: string;
+  days_until_expiration: number;
+}
+
 interface Plan {
   id: number;
   name: string;
   price: number;
   price_usd: number;
-  duration: number;
-  duration_type: string;
+  renewal_period_days: number;
+  renewal_info: RenewalInfo;
 }
 
 interface Membership {
@@ -172,7 +181,7 @@ export default function QuickRenew({ membership, plans }: Props) {
                     <p className="text-lg font-semibold">{membership.plan.name}</p>
                     <p className="text-sm font-semibold flex items-center gap-2">
                       <Badge variant="golden" className='text-sm'>
-                        {formatCurrency(membership.plan.price, 'usd')}
+                        ${membership.plan.price?.toFixed(2) || '0.00'}
                       </Badge>
                     </p>
                   </div>
@@ -211,6 +220,43 @@ export default function QuickRenew({ membership, plans }: Props) {
                   </Select>
                   {errors.plan_id && <p className="text-sm text-red-600">{errors.plan_id}</p>}
                 </div>
+
+                {/* Información de renovación */}
+                {selectedPlan && (
+                  <div className="mt-4 p-4 border rounded-lg bg-blue-50">
+                    <h4 className="font-medium text-blue-900 mb-2">Información de Renovación</h4>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span>Estado actual:</span>
+                        <Badge variant={selectedPlan.renewal_info.is_expired ? 'destructive' : 'default'}>
+                          {selectedPlan.renewal_info.is_expired ? 'Vencida' : 'Activa'}
+                        </Badge>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Fecha de vencimiento actual:</span>
+                        <span className="font-medium">{formatDate(selectedPlan.renewal_info.current_end_date)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Nueva fecha de vencimiento:</span>
+                        <span className="font-medium text-green-600">{formatDate(selectedPlan.renewal_info.new_end_date)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Días agregados:</span>
+                        <span className="font-medium">{selectedPlan.renewal_info.days_added} días</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Cálculo basado en:</span>
+                        <span className="text-blue-600">{selectedPlan.renewal_info.calculation_basis}</span>
+                      </div>
+                      {!selectedPlan.renewal_info.is_expired && (
+                        <div className="flex justify-between">
+                          <span>Días restantes actuales:</span>
+                          <span className="font-medium">{selectedPlan.renewal_info.days_until_expiration} días</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>

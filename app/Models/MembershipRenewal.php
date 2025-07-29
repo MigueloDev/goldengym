@@ -24,6 +24,11 @@ class MembershipRenewal extends Model
         'amount_paid' => 'float',
     ];
 
+    protected $appends = [
+        'sum_local_payments',
+        'sum_usd_payments',
+    ];
+
     // Relaciones
     public function membership()
     {
@@ -72,5 +77,15 @@ class MembershipRenewal extends Model
         return static::where('membership_id', $membershipId)
             ->where('created_at', '>=', now()->subHours($hours))
             ->first();
+    }
+
+    public function getSumLocalPaymentsAttribute()
+    {
+        return $this->payments()->where('currency', '=', 'local')->sum('amount');
+    }
+
+    public function getSumUsdPaymentsAttribute()
+    {
+        return $this->payments()->where('currency', '=', 'usd')->sum('amount');
     }
 }

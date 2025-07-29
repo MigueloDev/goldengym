@@ -100,6 +100,50 @@ class Membership extends Model
         return $this->end_date <= now()->addDays($days) && $this->end_date >= now();
     }
 
+    /**
+     * Obtiene la última renovación de esta membresía
+     */
+    public function getLastRenewal()
+    {
+        return $this->renewals()
+            ->orderBy('new_end_date', 'desc')
+            ->first();
+    }
+
+    /**
+     * Obtiene la fecha de vencimiento efectiva (considerando renovaciones)
+     */
+    public function getEffectiveEndDate()
+    {
+        $lastRenewal = $this->getLastRenewal();
+        return $lastRenewal ? $lastRenewal->new_end_date : $this->end_date;
+    }
+
+    /**
+     * Verifica si la membresía está vencida considerando renovaciones
+     */
+    public function isEffectivelyExpired()
+    {
+        return $this->getEffectiveEndDate() < now();
+    }
+
+    /**
+     * Verifica si la membresía está activa considerando renovaciones
+     */
+    public function isEffectivelyActive()
+    {
+        return $this->status === 'active' && $this->getEffectiveEndDate() >= now();
+    }
+
+    /**
+     * Calcula cuántos días faltan para que venza (considerando renovaciones)
+     */
+    public function getDaysUntilEffectiveExpiration()
+    {
+        $effectiveEndDate = $this->getEffectiveEndDate();
+        return max(0, now()->diffInDays($effectiveEndDate, false));
+    }
+
     public function getDaysUntilExpiration()
     {
         return now()->diffInDays($this->end_date, false);
