@@ -18,6 +18,8 @@ class Plan extends Model
         'renewal_period_days',
         'status',
         'features',
+        'subscription_price_usd',
+        'subscription_price_local',
     ];
 
     protected $casts = [

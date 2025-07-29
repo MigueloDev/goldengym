@@ -105,9 +105,9 @@ export default function QuickRenew({ membership, plans }: Props) {
     setData('payment_methods_json', JSON.stringify(paymentMethods));
   }, [paymentMethods, setData]);
 
-  const formatCurrency = (amount: number, currency: string) => {
-    const symbol = currency === 'usd' ? '$' : 'Bs';
-    return `${symbol}${amount.toLocaleString()}`;
+  const formatCurrency = (plan: Plan, currency: string) => {
+    const symbol = currency === 'usd' ? '$' : '$';
+    return `${symbol}${currency === 'usd' ? plan.price_usd : plan.price}`;
   };
 
   const formatDate = (dateString: string) => {
@@ -204,7 +204,7 @@ export default function QuickRenew({ membership, plans }: Props) {
                     <SelectContent>
                       {plans.map((plan) => (
                         <SelectItem key={plan.id} value={plan.id.toString()}>
-                          {plan.name} - {formatCurrency(plan.price, data.payment_currency)}
+                          {plan.name} - {formatCurrency(plan, data.payment_currency)}
                         </SelectItem>
                       ))}
                     </SelectContent>

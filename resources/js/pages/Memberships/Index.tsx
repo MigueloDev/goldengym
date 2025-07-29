@@ -285,7 +285,13 @@ export default function MembershipsIndex({ memberships, filters, stats }: Props)
                       </div>
                     </TableCell>
                     <TableCell>
-                      {formatCurrency(membership.plan_price_paid || '1', 'usd')}
+                      <Badge className="bg-golden/50 text-golden-foreground">
+                        {formatCurrency(membership.plan_price_paid || '1', 'usd')}
+                      </Badge>
+                      +
+                      <Badge className="bg-golden/50 text-golden-foreground">
+                        {formatCurrency(membership.subscription_price_paid || '1', 'usd')}
+                      </Badge>
                     </TableCell>
                     <TableCell>
                       {

@@ -170,6 +170,7 @@ class MembershipController extends Controller
                 'currency' => $validated['payment_currency'],
                 'registered_by' => auth()->id(),
                 'notes' => $validated['notes'],
+                'subscription_price_paid' => $validated['payment_currency'] === 'usd' ? $plan->subscription_price_usd : $plan->subscription_price_local,
             ]);
 
             $payments = [];
@@ -191,6 +192,7 @@ class MembershipController extends Controller
                     'reference' => $method['reference'] ?? 'Registro rápido',
                     'notes' => $method['notes'] ?? null,
                     'registered_by' => auth()->id(),
+                    'membership_id' => $membership->id,
                     'exchange_rate' => $validated['exchange_rate'] ?? 1,
                 ]);
 
@@ -258,6 +260,7 @@ class MembershipController extends Controller
 
         $totalAmount = 0;
         foreach ($paymentMethods as $method) {
+
             if (!isset($method['method'])) {
                 return back()->withErrors(['payment_methods' => 'Todos los métodos de pago deben tener un tipo válido.']);
             }
@@ -279,6 +282,8 @@ class MembershipController extends Controller
             }
             $totalAmount += $amount;
         }
+
+
 
         if ($totalAmount <= 0) {
             return back()->withErrors(['payment_methods' => 'El monto total debe ser mayor a 0.']);
@@ -318,6 +323,7 @@ class MembershipController extends Controller
                 'registered_by' => auth()->id(),
                 'exchange_rate' => $validated['exchange_rate'] ?? 1,
                 'payable_id' => $membership->id,
+                'membership_id' => $membership->id,
                 'payable_type' => \App\Models\MembershipRenewal::class,
             ]);
 

@@ -22,6 +22,7 @@ class Payment extends Model
         'reference',
         'registered_by',
         'notes',
+        'membership_id',
     ];
 
     protected $casts = [
@@ -29,7 +30,7 @@ class Payment extends Model
         'payment_date' => 'date',
     ];
 
-    protected $appends = ['method_color', 'method_label', 'membership', 'membership_renewal'];
+    protected $appends = ['method_color', 'method_label'];
 
     public function file()
     {
@@ -46,36 +47,9 @@ class Payment extends Model
         return $this->morphTo();
     }
 
-    public function getMembershipAttribute()
-    {
-        if ($this->payable_type === Membership::class) {
-            return Membership::find($this->payable_id);
-        }
-        return null;
-    }
-
-    public function getMembershipRenewalAttribute()
-    {
-        if ($this->payable_type === MembershipRenewal::class) {
-            return MembershipRenewal::find($this->payable_id);
-        }
-        return null;
-    }
-
     public function registeredBy()
     {
         return $this->belongsTo(User::class, 'registered_by');
-    }
-
-    // Métodos auxiliares para determinar el tipo de pago
-    public function isMembershipPayment()
-    {
-        return $this->payable_type === Membership::class;
-    }
-
-    public function isRenewalPayment()
-    {
-        return $this->payable_type === MembershipRenewal::class;
     }
 
     public function getPaymentTypeLabel()
@@ -166,17 +140,6 @@ class Payment extends Model
 
     public function membership()
     {
-        if ($this->payable_type === Membership::class) {
-            return $this->belongsTo(Membership::class, 'payable_id');
-        }
-        return $this->hasOneThrough(Membership::class, MembershipRenewal::class, 'id', 'id', 'payable_id', 'membership_id');
-    }
-
-    public function membershipRenewal()
-    {
-        if ($this->payable_type === MembershipRenewal::class) {
-            return $this->belongsTo(MembershipRenewal::class, 'payable_id');
-        }
-        return $this->belongsTo(MembershipRenewal::class, 'payable_id')->whereNull('id');
+        return $this->belongsTo(Membership::class, 'membership_id');
     }
 }

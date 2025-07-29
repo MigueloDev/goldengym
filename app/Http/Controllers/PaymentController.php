@@ -233,7 +233,7 @@ class PaymentController extends Controller
         // Si es una membresía y el pago cubre o excede la deuda restante, renovar la membresía
         if ($payable instanceof \App\Models\Membership && $totalAmount >= $remainingAmount) {
             // Calcular nueva fecha de fin
-            $newEndDate = \Carbon\Carbon::parse($payable->end_date)
+            $newEndDate = \Carbon\Carbon::now()
                 ->addDays($payable->plan->renewal_period_days);
 
             // Actualizar la membresía
@@ -266,8 +266,9 @@ class PaymentController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(Payment $payment)
+    public function show(Request $request, $id)
     {
+        $payment = Payment::findOrFail($id);
         $payment->load(['payable.client', 'payable.plan', 'registeredBy', 'paymentEvidences', 'membership']);
 
         return Inertia::render('Payments/Show', [
@@ -280,7 +281,7 @@ class PaymentController extends Controller
      */
     public function edit(Payment $payment)
     {
-        $payment->load(['payable', 'paymentEvidences', 'membership.client', 'membership.plan']);
+        $payment->load(['payable', 'paymentEvidences', 'payable.client', 'payable.plan', 'membership']);
 
         return Inertia::render('Payments/Edit', [
             'payment' => $payment,

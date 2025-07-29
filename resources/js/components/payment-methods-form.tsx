@@ -181,7 +181,7 @@ export default function PaymentMethodsForm({
     const newMethods = [...paymentMethods];
     const typeObject: { type?: 'usd' | 'bs' } = {};
     if (field === 'method') {
-      typeObject.type = value.includes('usd')|| value === 'crypto' ? 'usd' : 'bs';
+      typeObject.type = value.includes('usd') || value === 'crypto' ? 'usd' : 'bs';
     }
     newMethods[index] = { ...newMethods[index], [field]: value, ...typeObject };
     onPaymentMethodsChange(newMethods);
@@ -284,125 +284,125 @@ export default function PaymentMethodsForm({
             </div>
           )}
           <div className="grid grid-cols-1 col-span-2">
-          {targetAmount > 0 && (
-                  <div className="border-t pt-3 space-y-3">
-                    {/* Barra de progreso */}
-                    <div className="space-y-1">
-                      <div className="flex justify-between text-sm">
-                        <span>Progreso del pago:</span>
-                        <span className="font-medium">
-                          {new Decimal(targetAmount).minus(remainingUSD).dividedBy(targetAmount).times(100).round().toNumber()}%
-                        </span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div
-                          className="bg-green-600 h-2 rounded-full transition-all duration-300"
-                          style={{ width: `${Math.min(100, new Decimal(targetAmount).minus(remainingUSD).dividedBy(targetAmount).times(100).toNumber())}%` }}
-                        ></div>
-                      </div>
-                    </div>
-                    {/* Botones de pagar restante */}
-                    {!remainingUSD.equals(0) && (
-                      <div className="grid grid-cols-2 gap-2">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="h-8 text-xs"
-                          onClick={() => {
-                            // Lógica para agregar método de pago con el restante USD
-                            const emptyIndex = findEmptyPaymentMethod();
-                            const newMethod = {
-                              method: 'cash_usd' as const,
-                              type: 'usd' as const,
-                              amount: '',
-                              amount_usd: remainingUSD.abs().toString(),
-                              amount_bs: '',
-                              reference: '',
-                              notes: ''
-                            };
+            {targetAmount > 0 && (
+              <div className="border-t pt-3 space-y-3">
+                {/* Barra de progreso */}
+                <div className="space-y-1">
+                  <div className="flex justify-between text-sm">
+                    <span>Progreso del pago:</span>
+                    <span className="font-medium">
+                      {new Decimal(targetAmount).minus(remainingUSD).dividedBy(targetAmount).times(100).round().toNumber()}%
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div
+                      className="bg-green-600 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${Math.min(100, new Decimal(targetAmount).minus(remainingUSD).dividedBy(targetAmount).times(100).toNumber())}%` }}
+                    ></div>
+                  </div>
+                </div>
+                {/* Botones de pagar restante */}
+                {!remainingUSD.equals(0) && (
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-8 text-xs"
+                      onClick={() => {
+                        // Lógica para agregar método de pago con el restante USD
+                        const emptyIndex = findEmptyPaymentMethod();
+                        const newMethod = {
+                          method: 'cash_usd' as const,
+                          type: 'usd' as const,
+                          amount: '',
+                          amount_usd: remainingUSD.abs().toString(),
+                          amount_bs: '',
+                          reference: '',
+                          notes: ''
+                        };
 
-                            if (emptyIndex !== -1) {
-                              // Reutilizar método vacío existente
-                              const newMethods = [...paymentMethods];
-                              newMethods[emptyIndex] = newMethod;
-                              onPaymentMethodsChange(newMethods);
-                            } else {
-                              // Agregar nuevo método solo si no hay vacíos
-                              onPaymentMethodsChange([...paymentMethods, newMethod]);
-                            }
-                          }}
-                        >
-                          <span className="flex flex-col items-center">
-                            <span className="text-xs font-medium">
-                              {remainingUSD.lessThan(0) ? 'Exceso' : 'Restante'}
-                            </span>
-                            <span className={`text-sm font-bold ${remainingUSDColor}`}>
-                              {formatCurrency(remainingUSD.abs(), 'usd')}
-                            </span>
+                        if (emptyIndex !== -1) {
+                          // Reutilizar método vacío existente
+                          const newMethods = [...paymentMethods];
+                          newMethods[emptyIndex] = newMethod;
+                          onPaymentMethodsChange(newMethods);
+                        } else {
+                          // Agregar nuevo método solo si no hay vacíos
+                          onPaymentMethodsChange([...paymentMethods, newMethod]);
+                        }
+                      }}
+                    >
+                      <span className="flex flex-col items-center">
+                        <span className="text-xs font-medium">
+                          {remainingUSD.lessThan(0) ? 'Exceso' : 'Restante'}
+                        </span>
+                        <span className={`text-sm font-bold ${remainingUSDColor}`}>
+                          {formatCurrency(remainingUSD.abs(), 'usd')}
+                        </span>
+                      </span>
+                    </Button>
+
+                    {convertedAmount.greaterThan(0) && !remainingBS.equals(0) && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-8 text-xs"
+                        onClick={() => {
+                          // Lógica para agregar método de pago con el restante Bs
+                          const emptyIndex = findEmptyPaymentMethod();
+                          const newMethod = {
+                            method: 'cash_local' as const,
+                            type: 'bs' as const,
+                            amount: '',
+                            amount_usd: '',
+                            amount_bs: remainingBS.abs().toString(),
+                            reference: '',
+                            notes: ''
+                          };
+
+                          if (emptyIndex !== -1) {
+                            // Reutilizar método vacío existente
+                            const newMethods = [...paymentMethods];
+                            newMethods[emptyIndex] = newMethod;
+                            onPaymentMethodsChange(newMethods);
+                          } else {
+                            // Agregar nuevo método solo si no hay vacíos
+                            onPaymentMethodsChange([...paymentMethods, newMethod]);
+                          }
+                        }}
+                      >
+                        <span className="flex flex-col items-center">
+                          <span className="text-xs font-medium">
+                            {remainingBS.lessThan(0) ? 'Exceso' : 'Restante'}
                           </span>
-                        </Button>
-
-                        {convertedAmount.greaterThan(0) && !remainingBS.equals(0) && (
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="h-8 text-xs"
-                            onClick={() => {
-                              // Lógica para agregar método de pago con el restante Bs
-                              const emptyIndex = findEmptyPaymentMethod();
-                              const newMethod = {
-                                method: 'cash_local' as const,
-                                type: 'bs' as const,
-                                amount: '',
-                                amount_usd: '',
-                                amount_bs: remainingBS.abs().toString(),
-                                reference: '',
-                                notes: ''
-                              };
-
-                              if (emptyIndex !== -1) {
-                                // Reutilizar método vacío existente
-                                const newMethods = [...paymentMethods];
-                                newMethods[emptyIndex] = newMethod;
-                                onPaymentMethodsChange(newMethods);
-                              } else {
-                                // Agregar nuevo método solo si no hay vacíos
-                                onPaymentMethodsChange([...paymentMethods, newMethod]);
-                              }
-                            }}
-                          >
-                            <span className="flex flex-col items-center">
-                              <span className="text-xs font-medium">
-                                {remainingBS.lessThan(0) ? 'Exceso' : 'Restante'}
-                              </span>
-                              <span className={`text-sm font-bold ${remainingBSColor}`}>
-                                {formatCurrency(remainingBS.abs(), 'local')}
-                              </span>
-                            </span>
-                          </Button>
-                        )}
-                      </div>
+                          <span className={`text-sm font-bold ${remainingBSColor}`}>
+                            {formatCurrency(remainingBS.abs(), 'local')}
+                          </span>
+                        </span>
+                      </Button>
                     )}
-
-                    {/* Restantes/Exceso (texto informativo) */}
-                    <div className="space-y-1 text-sm text-muted-foreground">
-                      <div className="flex items-center justify-between">
-                        <span>Restante USD:</span>
-                        <span className={`${remainingUSDColor} font-bold`}>
-                          {remainingUSD.lessThan(0) ? '+' : ''}{formatCurrency(remainingUSD.abs(), 'usd')}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span>Restante Bs:</span>
-                        <span className={`${remainingBSColor} font-bold`}>
-                          {remainingBS.lessThan(0) ? '+' : ''}{formatCurrency(remainingBS.abs(), 'local')}
-                        </span>
-                      </div>
-                    </div>
                   </div>
                 )}
+
+                {/* Restantes/Exceso (texto informativo) */}
+                <div className="space-y-1 text-sm text-muted-foreground">
+                  <div className="flex items-center justify-between">
+                    <span>Restante USD:</span>
+                    <span className={`${remainingUSDColor} font-bold`}>
+                      {remainingUSD.lessThan(0) ? '+' : ''}{formatCurrency(remainingUSD.abs(), 'usd')}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>Restante Bs:</span>
+                    <span className={`${remainingBSColor} font-bold`}>
+                      {remainingBS.lessThan(0) ? '+' : ''}{formatCurrency(remainingBS.abs(), 'local')}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
         <div className="space-y-4 mt-2">
@@ -446,7 +446,7 @@ export default function PaymentMethodsForm({
                     />
                   </div>
                   <div className="space-y-2">
-                  <Label>Referencia</Label>
+                    <Label>Referencia</Label>
                     <Input
                       value={method.reference}
                       onChange={(e) => updatePaymentMethod(index, 'reference', e.target.value)}
@@ -484,27 +484,27 @@ export default function PaymentMethodsForm({
 
           {/* Total y Restantes */}
           <div className="p-4 bg-muted/50 rounded-lg">
-              <div className="space-y-3">
-                {/* Totales */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold">Total USD:</span>
-                    <span className="text-xl font-bold text-green-600">
-                      {formatCurrency(totalAmountUSD, 'usd')}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold">Total Pagado en Bs:</span>
-                    <span className="text-xl font-bold text-green-600">
-                      {formatCurrency(totalAmountBS, 'local')}
-                    </span>
-                  </div>
+            <div className="space-y-3">
+              {/* Totales */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold">Total USD:</span>
+                  <span className="text-xl font-bold text-green-600">
+                    {formatCurrency(totalAmountUSD, 'usd')}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold">Total Pagado en Bs:</span>
+                  <span className="text-xl font-bold text-green-600">
+                    {formatCurrency(totalAmountBS, 'local')}
+                  </span>
                 </div>
               </div>
+            </div>
           </div>
         </div>
 
-                {/* Alertas de exceso de pago */}
+        {/* Alertas de exceso de pago */}
         {(isOverpayingUSD || isOverpayingBS) && (
           <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
             <div className="flex items-start space-x-3">

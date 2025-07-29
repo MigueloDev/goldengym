@@ -198,7 +198,7 @@ export default function MembershipShow({ membership }: Props) {
                   <div>
                     <Label className="text-sm font-medium">Monto Pagado</Label>
                     <p className="text-lg font-semibold">
-                      {formatCurrency(membership.amount_paid, membership.currency)}
+                      {formatCurrency(membership.sum_local_payments, 'local')} + {formatCurrency(membership.sum_usd_payments, 'usd')}
                     </p>
                   </div>
                   <div>
@@ -399,7 +399,7 @@ export default function MembershipShow({ membership }: Props) {
                 <div className="flex justify-between">
                   <span className="text-sm">Total pagado:</span>
                   <span className="font-medium">
-                    {formatCurrency(membership.amount_paid, membership.currency)}
+                    {formatCurrency(membership.sum_local_payments, 'local')} + {formatCurrency(membership.sum_usd_payments, 'usd')}
                   </span>
                 </div>
                 <div className="flex justify-between">

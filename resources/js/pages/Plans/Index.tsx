@@ -34,6 +34,8 @@ interface Plan {
     created_at: string;
     memberships_count: number;
     active_memberships_count: number;
+    subscription_price_usd: number;
+    subscription_price_local: number;
 }
 
 interface Props {
@@ -250,14 +252,22 @@ export default function PlansIndex({ plans, filters, stats }: Props) {
                                         <div className="flex items-center space-x-6 text-sm">
                                             <div className="flex items-center space-x-2">
                                                 <DollarSign className="h-4 w-4 text-muted-foreground" />
+                                                <span className="font-medium">{formatPrice(plan.subscription_price_usd, 'USD')}</span>
+                                                <span className="text-muted-foreground">Inscripción en USD</span>
+                                            </div>
+                                            <div className="flex items-center space-x-2">
+                                                <CreditCard className="h-4 w-4 text-muted-foreground" />
+                                                <span className="font-medium">{formatPrice(plan.subscription_price_local, 'VES')}</span>
+                                                <span className="text-muted-foreground">Inscripción en Bolivares</span>
+                                            </div>
+                                            <div className="flex items-center space-x-2">
+                                                <DollarSign className="h-4 w-4 text-muted-foreground" />
                                                 <span className="font-medium">{formatPrice(plan.price_usd, 'USD')}</span>
-                                                <span className="text-muted-foreground">USD</span>
                                             </div>
                                             <div className="flex items-center space-x-2">
                                                 <span className="text-muted-foreground">Pago en Bolivares</span>
                                                 <CreditCard className="h-4 w-4 text-muted-foreground" />
                                                 <span className="font-medium">{formatPrice(plan.price, 'VES')}</span>
-                                                <span className="text-muted-foreground">USD</span>
                                             </div>
                                             {plan.price > plan.price_usd && (
                                                 <Badge variant="outline" className="text-xs">

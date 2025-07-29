@@ -5,6 +5,7 @@ import { dashboardBreadcrumb } from '@/lib/breadcrumbs';
 import { Head, Link } from '@inertiajs/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { useTranslations } from '@/hooks/use-translations';
 import {
     Users,
     CreditCard,
@@ -67,9 +68,11 @@ const formatCurrency = (amount: number, currency: string) => {
 };
 
 export default function Dashboard({ stats, expiring_memberships, recent_payments, quick_actions }: DashboardProps) {
+    const { t } = useTranslations();
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Principal" />
+            <Head title={t('Dashboard')} />
             <div className="flex h-full flex-1 flex-col gap-4 p-4">
                 {/* Header */}
 
@@ -78,7 +81,7 @@ export default function Dashboard({ stats, expiring_memberships, recent_payments
                     <Card className="p-4 border-golden/20 bg-golden/5">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm font-medium text-golden-foreground">Clientes</p>
+                                <p className="text-sm font-medium text-golden-foreground">{t('Clients')}</p>
                                 <p className="text-2xl font-bold text-golden">{stats.total_clients}</p>
                             </div>
                             <Users className="h-8 w-8 text-golden" />
@@ -87,13 +90,13 @@ export default function Dashboard({ stats, expiring_memberships, recent_payments
                             <Link href="/clients">
                                 <Button variant="outline" size="sm" className="w-full text-xs">
                                     <Users className="mr-2 h-3 w-3" />
-                                    Ver Clientes
+                                    {t('View')} {t('Clients')}
                                 </Button>
                             </Link>
                             <Link href="/clients/create">
                                 <Button size="sm" className="w-full text-xs bg-golden hover:bg-golden/90 text-golden-foreground">
                                     <Plus className="mr-2 h-3 w-3" />
-                                    Nuevo Cliente
+                                    {t('New')} {t('Client')}
                                 </Button>
                             </Link>
                         </div>

@@ -20,6 +20,7 @@ class Membership extends Model
         'registered_by',
         'notes',
         'plan_price_paid',
+        'subscription_price_paid',
     ];
 
     protected $casts = [
@@ -28,6 +29,8 @@ class Membership extends Model
         'amount_paid' => 'float',
         'plan_price_paid' => 'float',
     ];
+
+    protected $appends = ['sum_local_payments', 'sum_usd_payments'];
 
     // Relaciones
     public function client()
@@ -116,6 +119,16 @@ class Membership extends Model
         return static::where('client_id', $clientId)
             ->where('status', 'active')
             ->first();
+    }
+
+    public function getSumLocalPaymentsAttribute()
+    {
+        return $this->payments()->where('currency', '=', 'local')->sum('amount');
+    }
+
+    public function getSumUsdPaymentsAttribute()
+    {
+        return $this->payments()->where('currency', '=', 'usd')->sum('amount');
     }
 }
 

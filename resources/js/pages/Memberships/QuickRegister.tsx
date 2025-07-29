@@ -16,6 +16,7 @@ import CreateClientModal from '@/components/clients/CreateClientModal';
 import ClientSearch from '@/components/clients/ClientSearch';
 import { bodyToFetch } from '@/helpers';
 import { useToast } from '@/components/ui/toast';
+import { calculateTotalAmount } from '@/helpers/currency-calculator';
 
 interface Plan {
   id: number;
@@ -24,9 +25,9 @@ interface Plan {
   price_usd: number;
   duration: number;
   duration_type: string;
+  subscription_price_usd: number;
+  subscription_price_local: number;
 }
-
-
 
 interface Pathology {
   id: number;
@@ -69,15 +70,26 @@ export default function QuickRegister({ plans, pathologies }: Props) {
     exchange_rate: '',
   });
 
+  const formatCurrency = (plan: Plan, currency: string) => {
+    const amount = currency === 'usd' ? plan.price_usd : plan.price;
+    const symbol = currency === 'usd' ? '$' : '$';
+    return `${symbol}${amount?.toFixed(2) || '0.00'}`;
+  };
+
+  const formatSubscriptionPrice = (plan: Plan, currency: string) => {
+    if (!plan) return '0.00';
+    const amount = currency === 'usd' ? plan.subscription_price_usd : plan.subscription_price_local;
+    const symbol = currency === 'usd' ? '$' : '$';
+    return `${symbol}${amount || '0.00'}`;
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-
     const form = {
       ...data,
       payment_evidences: paymentEvidences,
     }
     const formData = bodyToFetch(form, true, true);
-
     router.post(route('memberships.store-quick-register'), formData, {
       onError: (errors) => {
         console.log("Se recibieron errores");
@@ -221,7 +233,7 @@ export default function QuickRegister({ plans, pathologies }: Props) {
                         <SelectContent>
                           {plans.map((plan) => (
                             <SelectItem key={plan.id} value={plan.id.toString()}>
-                              {plan.name} - ${plan.price}
+                              {plan.name} - {formatCurrency(plan, data.payment_currency as 'usd' | 'local')}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -238,6 +250,10 @@ export default function QuickRegister({ plans, pathologies }: Props) {
                       />
                       {errors.start_date && <p className="text-sm text-red-600">{errors.start_date}</p>}
                     </div>
+                    <div>
+                      <Label htmlFor="end_date">Costo de Inscripción</Label>
+                      <p className="w-20 text-center text-sm font-bold text-golden bg-black p-2 rounded-md border-3 border-golden">{formatSubscriptionPrice(selectedPlan as Plan, data.payment_currency as 'usd' | 'local')}</p>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -252,7 +268,7 @@ export default function QuickRegister({ plans, pathologies }: Props) {
               notes={data.notes}
               onNotesChange={(notes) => setData('notes', notes)}
               errors={errors}
-              targetAmount={data.payment_currency === 'usd' ? selectedPlan?.price_usd || 0 : selectedPlan?.price || 0}
+              targetAmount={calculateTotalAmount(selectedPlan || null, data.payment_currency as 'usd' | 'bs' | 'local').toNumber()}
               showExchangeRate={true}
               exchangeRate={data.exchange_rate}
               onExchangeRateChange={(rate) => setData('exchange_rate', rate)}
