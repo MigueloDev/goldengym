@@ -159,6 +159,7 @@ class MembershipController extends Controller
                     'plan_id' => 'Plan no encontrado.',
                 ]);
             }
+
             $membership = Membership::create([
                 'client_id' => $client->id,
                 'plan_id' => $plan->id,
@@ -167,7 +168,7 @@ class MembershipController extends Controller
                 'status' => 'active',
                 'amount_paid' => $totalAmount,
                 'plan_price_paid' => $validated['payment_currency'] === 'usd' ? $plan->price_usd : $plan->price,
-                'currency' => $validated['payment_currency'],
+                'currency' => $validated['payment_currency'] === 'usd' ? 'usd' : 'local',
                 'registered_by' => auth()->id(),
                 'notes' => $validated['notes'],
                 'subscription_price_paid' => $validated['payment_currency'] === 'usd' ? $plan->subscription_price_usd : $plan->subscription_price_local,
@@ -204,6 +205,7 @@ class MembershipController extends Controller
                     $payments[0]->addPaymentEvidence($evidence);
                 }
             }
+
             DB::commit();
         } catch (\Exception $e) {
             DB::rollBack();

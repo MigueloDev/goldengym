@@ -186,7 +186,14 @@ export default function MembershipShow({ membership }: Props) {
                     <Label className="text-sm font-medium">Plan</Label>
                     <p className="text-lg font-semibold">{membership.plan.name}</p>
                     <p className="text-sm text-muted-foreground">
-                      {membership.plan.duration} {membership.plan.duration_type} - {formatCurrency(membership.plan.price, membership.currency)}
+                      Duración: {membership.plan.renewal_period_days} días
+                      {
+                        membership.currency === 'local' ? (
+                          <span> - Inscripción: {formatCurrency(membership.plan.subscription_price_local, 'usd')} - Mensualidad: {formatCurrency(membership.plan.price, 'usd')}</span>
+                        ) : (
+                          <span> - Inscripción: {formatCurrency(membership.plan.subscription_price_usd, 'usd')} - Mensualidad: {formatCurrency(membership.plan.price_usd, 'usd')}</span>
+                        )
+                      }
                     </p>
                   </div>
                   <div>
