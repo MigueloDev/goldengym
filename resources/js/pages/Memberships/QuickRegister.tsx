@@ -16,7 +16,7 @@ import CreateClientModal from '@/components/clients/CreateClientModal';
 import ClientSearch from '@/components/clients/ClientSearch';
 import { bodyToFetch } from '@/helpers';
 import { useToast } from '@/components/ui/toast';
-import { calculateTotalAmount } from '@/helpers/currency-calculator';
+import Decimal from 'decimal.js';
 
 interface Plan {
   id: number;
@@ -56,6 +56,7 @@ export default function QuickRegister({ plans, pathologies }: Props) {
     { method: 'cash_usd', amount: '', type: 'usd', reference: '', notes: '' }
   ]);
   const [paymentEvidences, setPaymentEvidences] = useState<File[]>([]);
+  const [includeSubscription, setIncludeSubscription] = useState(true);
   const { addToast } = useToast();
 
   const { data, setData, processing, errors } = useForm({
@@ -81,6 +82,29 @@ export default function QuickRegister({ plans, pathologies }: Props) {
     const amount = currency === 'usd' ? plan.subscription_price_usd : plan.subscription_price_local;
     const symbol = currency === 'usd' ? '$' : '$';
     return `${symbol}${amount || '0.00'}`;
+  };
+
+  const calculateTotalAmountWithSubscription = (plan: Plan | null, paymentCurrency: 'usd' | 'bs' | 'local', includeSubscription: boolean) => {
+    if (!plan) {
+      return new Decimal(0);
+    }
+
+    try {
+      if (paymentCurrency === 'usd') {
+        // Para USD: precio del plan + precio de suscripción en USD (si se incluye)
+        const planPrice = new Decimal(plan.price_usd || 0);
+        const subscriptionPrice = includeSubscription ? new Decimal(plan.subscription_price_usd || 0) : new Decimal(0);
+        return planPrice.plus(subscriptionPrice);
+      } else {
+        // Para Bs: precio del plan + precio de suscripción en Bs (si se incluye)
+        const planPrice = new Decimal(plan.price || 0);
+        const subscriptionPrice = includeSubscription ? new Decimal(plan.subscription_price_local || 0) : new Decimal(0);
+        return planPrice.plus(subscriptionPrice);
+      }
+    } catch (error) {
+      console.error('Error calculating total amount:', error);
+      return new Decimal(0);
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -251,8 +275,23 @@ export default function QuickRegister({ plans, pathologies }: Props) {
                       {errors.start_date && <p className="text-sm text-red-600">{errors.start_date}</p>}
                     </div>
                     <div>
-                      <Label htmlFor="end_date">Costo de Inscripción</Label>
-                      <p className="w-20 text-center text-sm font-bold text-golden bg-black p-2 rounded-md border-3 border-golden">{formatSubscriptionPrice(selectedPlan as Plan, data.payment_currency as 'usd' | 'local')}</p>
+                      <div className="flex items-center space-x-2 mb-2">
+                        <input
+                          type="checkbox"
+                          id="include_subscription"
+                          checked={includeSubscription}
+                          onChange={(e) => setIncludeSubscription(e.target.checked)}
+                          className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+                        />
+                        <Label htmlFor="include_subscription" className="text-sm font-medium">
+                          Incluir costo de inscripción
+                        </Label>
+                      </div>
+                      {includeSubscription && (
+                        <p className="w-20 text-center text-sm font-bold text-golden bg-black p-2 rounded-md border-3 border-golden">
+                          {formatSubscriptionPrice(selectedPlan as Plan, data.payment_currency as 'usd' | 'local')}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </CardContent>
@@ -268,7 +307,7 @@ export default function QuickRegister({ plans, pathologies }: Props) {
               notes={data.notes}
               onNotesChange={(notes) => setData('notes', notes)}
               errors={errors}
-              targetAmount={calculateTotalAmount(selectedPlan || null, data.payment_currency as 'usd' | 'bs' | 'local').toNumber()}
+              targetAmount={calculateTotalAmountWithSubscription(selectedPlan || null, data.payment_currency as 'usd' | 'bs' | 'local', includeSubscription).toNumber()}
               showExchangeRate={true}
               exchangeRate={data.exchange_rate}
               onExchangeRateChange={(rate) => setData('exchange_rate', rate)}
