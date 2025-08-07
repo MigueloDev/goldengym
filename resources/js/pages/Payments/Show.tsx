@@ -106,7 +106,11 @@ export default function ShowPayment({ payment }: Props) {
 
     const formatDate = (dateString: string) => {
         const date = new Date(dateString);
-        return date.toLocaleDateString('es-ES');
+        return date.toLocaleDateString('es-VE', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
     };
 
     const getStatusBadge = (status: string) => {

@@ -43,6 +43,8 @@ interface Renewal {
   };
   created_at: string;
   payments?: Payment[];
+  sum_local_payments?: number;
+  sum_usd_payments?: number;
 }
 
 interface Membership {
@@ -57,8 +59,12 @@ interface Membership {
     id: number;
     name: string;
     price: number;
+    price_usd?: number;
     duration: number;
     duration_type: string;
+    renewal_period_days?: number;
+    subscription_price_local?: number;
+    subscription_price_usd?: number;
   };
   start_date: string;
   end_date: string;
@@ -74,6 +80,8 @@ interface Membership {
   updated_at: string;
   payments: Payment[];
   renewals: Renewal[];
+  sum_local_payments?: number;
+  sum_usd_payments?: number;
 }
 
 interface Props {
@@ -81,14 +89,19 @@ interface Props {
 }
 
 export default function MembershipShow({ membership }: Props) {
-  const formatCurrency = (amount: number, currency: string) => {
+  const formatCurrency = (amount: number | undefined, currency: string) => {
+    const value = amount || 0;
     const symbol = currency === 'usd' ? '$' : 'Bs ';
-    return `${symbol}${amount.toLocaleString()}`;
+    return `${symbol}${value.toLocaleString()}`;
   };
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('es-ES');
+    return date.toLocaleDateString('es-VE', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
   };
 
   const getStatusBadge = (status: string) => {
@@ -106,6 +119,23 @@ export default function MembershipShow({ membership }: Props) {
     };
     return <Badge className={variants[status as keyof typeof variants]}>{label[status as keyof typeof label]}</Badge>;
   };
+
+  // Determinar período actual
+  const getCurrentPeriod = () => {
+    if (membership.renewals && membership.renewals.length > 0) {
+      const lastRenewal = membership.renewals[membership.renewals.length - 1];
+      return {
+        start: lastRenewal.previous_end_date,
+        end: lastRenewal.new_end_date
+      };
+    }
+    return {
+      start: membership.start_date,
+      end: membership.end_date
+    };
+  };
+
+  const currentPeriod = getCurrentPeriod();
 
   return (
     <AppLayout breadcrumbs={membershipsBreadcrumbs.show(membership.id, membership.client.name)}>
@@ -182,11 +212,20 @@ export default function MembershipShow({ membership }: Props) {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Inicio de inscripción y período actual */}
+                  <div>
+                    <Label className="text-sm font-medium">Inicio de inscripción</Label>
+                    <p className="text-sm">{formatDate(membership.start_date)}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium">Período actual</Label>
+                    <p className="text-sm">{formatDate(currentPeriod.start)} - {formatDate(currentPeriod.end)}</p>
+                  </div>
                   <div>
                     <Label className="text-sm font-medium">Plan</Label>
                     <p className="text-lg font-semibold">{membership.plan.name}</p>
                     <p className="text-sm text-muted-foreground">
-                      Duración: {membership.plan.renewal_period_days} días
+                      Duración: {membership.plan.renewal_period_days || membership.plan.duration} días
                       {
                         membership.currency === 'local' ? (
                           <span> - Inscripción: {formatCurrency(membership.plan.subscription_price_local, 'usd')} - Mensualidad: {formatCurrency(membership.plan.price, 'usd')}</span>
