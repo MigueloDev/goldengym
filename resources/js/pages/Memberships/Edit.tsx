@@ -10,6 +10,7 @@ import Heading from '@/components/heading';
 import { ArrowLeft, Save } from 'lucide-react';
 import AppLayout from '@/layouts/app-layout';
 import { membershipsBreadcrumbs } from '@/lib/breadcrumbs';
+import { formatCurrency } from '../../helpers/currency-calculator';
 
 interface Plan {
   id: number;
@@ -193,14 +194,14 @@ export default function MembershipEdit({ membership, plans }: Props) {
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label className="text-sm font-medium">Monto Pagado</Label>
+                  <Label className="text-sm font-medium">Monto Pagado Bs</Label>
                   <p className="text-lg font-semibold">
-                    {membership.currency === 'usd' ? '$' : 'Bs'}{membership.amount_paid.toLocaleString()}
+                    {formatCurrency(parseFloat(membership.sum_local_payments), 'local')}
                   </p>
                 </div>
                 <div>
-                  <Label className="text-sm font-medium">Moneda</Label>
-                  <p className="text-sm">{membership.currency === 'usd' ? 'Dólares ($)' : 'Colones (₡)'}</p>
+                  <Label className="text-sm font-medium">Monto Pagado Usd</Label>
+                  <p className="text-sm">{formatCurrency(parseFloat(membership.sum_usd_payments), 'usd')}</p>
                 </div>
               </div>
               <p className="text-sm text-muted-foreground mt-2">
