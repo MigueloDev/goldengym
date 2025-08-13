@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import AppLayout from '@/layouts/app-layout';
 import { clientsBreadcrumbs } from '@/lib/breadcrumbs';
+import DateInput from '@/components/DateInput';
 
 interface Pathology {
   id: number;
@@ -373,20 +374,13 @@ export default function EditClient({ client, pathologies }: Props) {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="birth_date">Fecha de nacimiento</Label>
-                    <div className="relative">
-                      <Calendar className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="birth_date"
-                        type="date"
-                        value={data.birth_date}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setData('birth_date', e.target.value)}
-                        className="pl-10"
-                      />
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      Formato: DD/MM/YYYY
-                    </p>
+                    <DateInput
+                      id="birth_date"
+                      label="Fecha de nacimiento *"
+                      value={data.birth_date}
+                      onChange={(value) => setData('birth_date', value)}
+                      error={errors.birth_date}
+                    />
                   </div>
 
                   <div className="space-y-2">

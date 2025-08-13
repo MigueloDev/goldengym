@@ -1,7 +1,6 @@
 import { Head, useForm } from '@inertiajs/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -11,6 +10,8 @@ import { ArrowLeft, Save } from 'lucide-react';
 import AppLayout from '@/layouts/app-layout';
 import { membershipsBreadcrumbs } from '@/lib/breadcrumbs';
 import { formatCurrency } from '../../helpers/currency-calculator';
+import DateInput from '@/components/DateInput';
+import Decimal from 'decimal.js';
 
 interface Plan {
   id: number;
@@ -151,26 +152,24 @@ export default function MembershipEdit({ membership, plans }: Props) {
                   </Select>
                   {errors.status && <p className="text-sm text-red-600">{errors.status}</p>}
                 </div>
-                <div>
-                  <Label htmlFor="start_date">Fecha de Inicio *</Label>
-                  <Input
-                    id="start_date"
-                    type="date"
-                    value={data.start_date}
-                    onChange={(e) => setData('start_date', e.target.value)}
-                  />
-                  {errors.start_date && <p className="text-sm text-red-600">{errors.start_date}</p>}
-                </div>
-                <div>
-                  <Label htmlFor="end_date">Fecha de Fin *</Label>
-                  <Input
-                    id="end_date"
-                    type="date"
-                    value={data.end_date}
-                    onChange={(e) => setData('end_date', e.target.value)}
-                  />
-                  {errors.end_date && <p className="text-sm text-red-600">{errors.end_date}</p>}
-                </div>
+                <DateInput
+                  id="start_date"
+                  label="Fecha de Inicio"
+                  value={data.start_date}
+                  onChange={(value) => setData('start_date', value)}
+                  error={errors.start_date}
+                  required
+                  format="dd-mm-yyyy"
+                />
+                <DateInput
+                  id="end_date"
+                  label="Fecha de Fin"
+                  value={data.end_date}
+                  onChange={(value) => setData('end_date', value)}
+                  error={errors.end_date}
+                  required
+                  format="dd-mm-yyyy"
+                />
               </div>
               <div>
                 <Label htmlFor="notes">Notas</Label>
@@ -192,18 +191,14 @@ export default function MembershipEdit({ membership, plans }: Props) {
               <CardTitle>Información de Pago</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-sm font-medium">Monto Pagado Bs</Label>
-                  <p className="text-lg font-semibold">
-                    {formatCurrency(parseFloat(membership.sum_local_payments), 'local')}
-                  </p>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-sm font-medium">Monto Pagado</Label>
+                    <p className="text-lg font-semibold">
+                      {formatCurrency(new Decimal(membership.amount_paid), membership.currency === 'local' ? 'bs' : 'usd')}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <Label className="text-sm font-medium">Monto Pagado Usd</Label>
-                  <p className="text-sm">{formatCurrency(parseFloat(membership.sum_usd_payments), 'usd')}</p>
-                </div>
-              </div>
               <p className="text-sm text-muted-foreground mt-2">
                 Nota: Los montos de pago no se pueden editar desde aquí. Para registrar nuevos pagos, use la función de renovación.
               </p>

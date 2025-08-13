@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { bodyToFetch } from '@/helpers';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useToast } from '@/components/ui/toast';
+import { formatDateToSpanish } from '@/helpers/date-formatter';
 
 interface RenewalInfo {
   is_expired: boolean;
@@ -234,11 +235,11 @@ export default function QuickRenew({ membership, plans }: Props) {
                       </div>
                       <div className="flex justify-between">
                         <span>Fecha de vencimiento actual:</span>
-                        <span className="font-medium">{formatDate(selectedPlan.renewal_info.current_end_date)}</span>
+                        <span className="font-medium">{formatDateToSpanish(selectedPlan.renewal_info.current_end_date)}</span>
                       </div>
                       <div className="flex justify-between">
                         <span>Nueva fecha de vencimiento:</span>
-                        <span className="font-medium text-green-600">{formatDate(selectedPlan.renewal_info.new_end_date)}</span>
+                        <span className="font-medium text-green-600">{formatDateToSpanish(selectedPlan.renewal_info.new_end_date)}</span>
                       </div>
                       <div className="flex justify-between">
                         <span>Días agregados:</span>

@@ -356,7 +356,7 @@ class MembershipController extends Controller
                 'notes' => $method['notes'] ?? null,
                 'registered_by' => auth()->id(),
                 'exchange_rate' => $validated['exchange_rate'] ?? 1,
-                'payable_id' => $membership->id,
+                'payable_id' => $renewal->id,
                 'membership_id' => $membership->id,
                 'payable_type' => \App\Models\MembershipRenewal::class,
             ]);

@@ -118,8 +118,8 @@ class Plan extends Model
 
         return [
             'is_expired' => $isExpired,
-            'current_end_date' => $lastRenewalDate->format('Y-m-d'),
-            'new_end_date' => $newEndDate->format('Y-m-d'),
+            'current_end_date' => Carbon::parse($lastRenewalDate)->format('Y-m-d'),
+            'new_end_date' => Carbon::parse($newEndDate)->format('Y-m-d'),
             'days_added' => $this->renewal_period_days,
             'calculation_basis' => $isExpired ? 'Desde hoy' : 'Desde fecha de vencimiento actual',
             'days_until_expiration' => $isExpired ? 0 : (int) $today->diffInDays($lastRenewalDate, false),

@@ -11,6 +11,7 @@ import { Users, CheckCircle, XCircle, Clock, Plus, Search, X, RefreshCw, Eye, Ed
 import AppLayout from '@/layouts/app-layout';
 import { membershipsBreadcrumbs } from '@/lib/breadcrumbs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { formatDateToSpanish } from '@/helpers/date-formatter';
 
 interface Membership {
   id: number;
@@ -31,6 +32,8 @@ interface Membership {
   currency: 'local' | 'usd';
   payments_count: number;
   created_at: string;
+  plan_price_paid: number;
+  subscription_price_paid: number;
   payments: {
     id: number;
     amount: number;
@@ -113,13 +116,9 @@ export default function MembershipsIndex({ memberships, filters, stats }: Props)
     return `${symbol}${amount.toLocaleString()}`;
   };
 
+  // Usar nuestra función de utilidad para formatear fechas
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('es-VE', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
+    return formatDateToSpanish(dateString);
   };
 
   return (

@@ -17,6 +17,7 @@ import ClientSearch from '@/components/clients/ClientSearch';
 import { bodyToFetch } from '@/helpers';
 import { useToast } from '@/components/ui/toast';
 import Decimal from 'decimal.js';
+import DateInput from '@/components/DateInput';
 
 interface Plan {
   id: number;
@@ -265,14 +266,13 @@ export default function QuickRegister({ plans, pathologies }: Props) {
                       {errors.plan_id && <p className="text-sm text-red-600">{errors.plan_id}</p>}
                     </div>
                     <div>
-                      <Label htmlFor="start_date">Fecha de Inicio *</Label>
-                      <Input
+                      <DateInput
                         id="start_date"
-                        type="date"
+                        label="Fecha de Inicio"
                         value={data.start_date}
-                        onChange={(e) => setData('start_date', e.target.value)}
+                        onChange={(value) => setData('start_date', value)}
+                        error={errors.start_date}
                       />
-                      {errors.start_date && <p className="text-sm text-red-600">{errors.start_date}</p>}
                     </div>
                     <div>
                       <div className="flex items-center space-x-2 mb-2">
