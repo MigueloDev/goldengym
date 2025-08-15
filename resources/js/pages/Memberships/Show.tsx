@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { membershipsBreadcrumbs } from '@/lib/breadcrumbs';
 import AppLayout from '@/layouts/app-layout';
 import { getMethodLabel } from '@/helpers';
+import { formatDateToSpanish } from '@/helpers/date-formatter';
 
 interface PaymentEvidence {
   id: number;
@@ -95,13 +96,9 @@ export default function MembershipShow({ membership }: Props) {
     return `${symbol}${value.toLocaleString()}`;
   };
 
+  // Usar nuestra función de utilidad para formatear fechas
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('es-VE', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
+    return formatDateToSpanish(dateString);
   };
 
   const getStatusBadge = (status: string) => {
