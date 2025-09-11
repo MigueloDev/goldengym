@@ -21,12 +21,14 @@ import {
     Mail,
     Calendar,
     MapPin,
-    FileText
+    FileText,
+    CheckCircle
 } from 'lucide-react';
 import { Pagination } from '@/components/ui/pagination';
 import GenerateDocumentModal from '@/components/generate-document-modal';
 import AppLayout from '@/layouts/app-layout';
 import { clientsBreadcrumbs } from '@/lib/breadcrumbs';
+import { Alert, AlertTitle } from '@/components/ui/alert';
 
 interface Client {
     id: number;
@@ -95,7 +97,7 @@ interface Props {
     documentTemplates: DocumentTemplate[];
 }
 
-export default function ClientsIndex({ clients, filters, stats, documentTemplates }: Props) {
+export default function ClientsIndex({ clients, filters, stats, documentTemplates, flash}: Props) {
     const [search, setSearch] = useState(filters.search || '');
     const [status, setStatus] = useState(filters.status || 'all');
     const [membershipStatus, setMembershipStatus] = useState(filters.membership_status || 'all');
@@ -168,6 +170,18 @@ export default function ClientsIndex({ clients, filters, stats, documentTemplate
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Clientes" />
             <div className="flex h-full flex-1 flex-col gap-6 p-6">
+            {flash.success && (
+              <Alert variant="default">
+                <CheckCircle className="h-4 w-4" />
+                <AlertTitle>{flash.message}</AlertTitle>
+              </Alert>
+            )}
+            {flash.success === false && (
+              <Alert variant="destructive" className="mb-1 p-2">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>{flash.message}</AlertTitle>
+              </Alert>
+            )}
                 <div className="space-y-6">
                 {/* Header */}
                 <div className="flex items-center justify-between">

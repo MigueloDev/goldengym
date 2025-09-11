@@ -272,6 +272,12 @@ class ClientController extends Controller
      */
     public function destroy(Client $client)
     {
+        if($client->activeMembership) {
+            return redirect()->route('clients.index')
+                ->with('flash_success', false)
+                ->with('flash_message', 'El cliente tiene una membresía activa y no puede ser eliminado.');
+        }
+
         $client->delete();
 
         return redirect()->route('clients.index')
