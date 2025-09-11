@@ -103,7 +103,7 @@ const DateInput: React.FC<DateInputProps> = ({
           dropdownMode="select"
           yearDropdownItemNumber={100}
           scrollableYearDropdown
-          minDate={new Date(1970, 0, 1)}
+          minDate={new Date(1940, 0, 1)}
           maxDate={new Date(new Date().getFullYear() + 1, 11, 31)}
           previousMonthButtonLabel=""
           nextMonthButtonLabel=""

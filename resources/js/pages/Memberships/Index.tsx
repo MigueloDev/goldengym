@@ -275,9 +275,9 @@ export default function MembershipsIndex({ memberships, filters, stats }: Props)
                 {memberships.data.map((membership) => (
                   <TableRow key={membership.id}>
                     <TableCell className="font-medium">
-                      {membership.client.name}
+                      {membership.client?.name}
                     </TableCell>
-                    <TableCell>{membership.plan.name}</TableCell>
+                    <TableCell>{membership.plan?.name}</TableCell>
                     <TableCell>
                       {getStatusBadge(membership.status)}
                     </TableCell>
