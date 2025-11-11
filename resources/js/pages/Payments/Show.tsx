@@ -271,18 +271,18 @@ export default function ShowPayment({ payment }: Props) {
                                         <h4 className="font-semibold mb-2">Cliente</h4>
                                         <div className="flex items-center gap-2">
                                             <User className="h-4 w-4 text-muted-foreground" />
-                                            <span>{payment.payable.client.name}</span>
+                                            <span>{payment.payable?.client?.name}</span>
                                         </div>
-                                        {payment.payable.client.email && (
+                                        {payment.payable?.client?.email && (
                                             <p className="text-sm text-muted-foreground mt-1">
-                                                {payment.payable.client.email}
+                                                {payment.payable?.client?.email}
                                             </p>
                                         )}
                                     </div>
                                     <div>
                                         <h4 className="font-semibold mb-2">Plan</h4>
                                         <p className="text-sm text-muted-foreground">
-                                            {payment.payable.plan.name}
+                                            {payment.payable?.plan?.name}
                                         </p>
                                         <p className="text-xs text-muted-foreground">
                                             Precio: {formatCurrency(payment.payable.plan.price, 'usd')}
@@ -383,7 +383,7 @@ export default function ShowPayment({ payment }: Props) {
                                     </Link>
                                   )
                                 }
-                                <Link href={`/clients/${payment.payable.client.id}`}>
+                                <Link href={`/clients/${payment.payable?.client?.id}`}>
                                     <Button variant="outline" size="sm" className="w-full">
                                         <User className="mr-2 h-4 w-4" />
                                         Ver Cliente
