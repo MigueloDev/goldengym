@@ -27,6 +27,7 @@ class Client extends Model
 
     protected $casts = [
         'birth_date' => 'date',
+        'deleted_at' => 'datetime',
     ];
 
     // Relación polimórfica con archivos
@@ -57,11 +58,6 @@ class Client extends Model
         return $this->hasOne(Membership::class)->where('status', 'active');
     }
 
-    public function documentSignatures()
-    {
-        return $this->hasMany(DocumentSignature::class);
-    }
-
     // Relación muchos a muchos con patologías
     public function pathologies()
     {
@@ -81,6 +77,25 @@ class Client extends Model
         return $query->whereHas('activeMembership', function ($q) use ($days) {
             $q->where('end_date', '<=', now()->addDays($days))
               ->where('end_date', '>=', now());
+        });
+    }
+
+    // Busca clientes que compartan identidad (correo o cédula) con los datos dados
+    public function scopeMatchingIdentity($query, ?string $email, ?string $identificationNumber)
+    {
+        return $query->where(function ($q) use ($email, $identificationNumber) {
+            if ($email) {
+                $q->orWhere('email', $email);
+            }
+
+            if ($identificationNumber) {
+                $q->orWhere('identification_number', $identificationNumber);
+            }
+
+            // Sin criterios no debe coincidir con nadie
+            if (!$email && !$identificationNumber) {
+                $q->whereRaw('1 = 0');
+            }
         });
     }
 
@@ -107,6 +122,44 @@ class Client extends Model
         }
 
         return 'active';
+    }
+
+    // Cuenta los pagos asociados al cliente a través de sus membresías y renovaciones.
+    // No existe payments.client_id, así que hay que recorrer ambos caminos:
+    // el FK membership_id y la relación polimórfica payable.
+    public function paymentsQuery()
+    {
+        $membershipIds = $this->memberships()->pluck('id');
+        $renewalIds = MembershipRenewal::whereIn('membership_id', $membershipIds)->pluck('id');
+
+        return Payment::where(function ($query) use ($membershipIds, $renewalIds) {
+            $query->whereIn('membership_id', $membershipIds)
+                ->orWhere(function ($q) use ($membershipIds) {
+                    $q->where('payable_type', Membership::class)
+                      ->whereIn('payable_id', $membershipIds);
+                })
+                ->orWhere(function ($q) use ($renewalIds) {
+                    $q->where('payable_type', MembershipRenewal::class)
+                      ->whereIn('payable_id', $renewalIds);
+                });
+        });
+    }
+
+    // ¿Tiene historial que se perdería si se borrara físicamente?
+    public function hasFinancialHistory(): bool
+    {
+        return $this->memberships()->exists() || $this->paymentsQuery()->exists();
+    }
+
+    // Resumen de lo que se conserva al eliminar (o se recupera al restaurar)
+    public function deletionSummary(): array
+    {
+        return [
+            'memberships' => $this->memberships()->count(),
+            'payments' => $this->paymentsQuery()->count(),
+            'documents' => $this->files()->count(),
+            'pathologies' => $this->pathologies()->count(),
+        ];
     }
 
     // Método para obtener la edad del cliente

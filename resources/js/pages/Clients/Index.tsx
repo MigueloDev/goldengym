@@ -22,8 +22,17 @@ import {
     Calendar,
     MapPin,
     FileText,
-    CheckCircle
+    CheckCircle,
+    RotateCcw
 } from 'lucide-react';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { Pagination } from '@/components/ui/pagination';
 import GenerateDocumentModal from '@/components/generate-document-modal';
 import AppLayout from '@/layouts/app-layout';
@@ -59,6 +68,7 @@ interface Client {
     }>;
     memberships_count: number;
     files_count: number;
+    deleted_at?: string | null;
 }
 
 interface DocumentTemplate {
@@ -93,11 +103,16 @@ interface Props {
         active: number;
         with_membership: number;
         expiring_soon: number;
+        deleted: number;
     };
     documentTemplates: DocumentTemplate[];
+    flash?: {
+        success?: boolean;
+        message?: string;
+    };
 }
 
-export default function ClientsIndex({ clients, filters, stats, documentTemplates, flash}: Props) {
+export default function ClientsIndex({ clients, filters, stats, documentTemplates, flash = {} }: Props) {
     const [search, setSearch] = useState(filters.search || '');
     const [status, setStatus] = useState(filters.status || 'all');
     const [membershipStatus, setMembershipStatus] = useState(filters.membership_status || 'all');
@@ -124,10 +139,20 @@ export default function ClientsIndex({ clients, filters, stats, documentTemplate
         router.get('/clients', searchParams, { preserveState: true });
     };
 
-    const handleDelete = (clientId: number) => {
-        if (confirm('¿Estás seguro de que quieres eliminar este cliente?')) {
-            router.delete(`/clients/${clientId}`);
-        }
+    // Cliente pendiente de confirmación de borrado
+    const [clientToDelete, setClientToDelete] = useState<Client | null>(null);
+
+    const showingDeleted = status === 'deleted';
+
+    const confirmDelete = () => {
+        if (!clientToDelete) return;
+        router.delete(`/clients/${clientToDelete.id}`, {
+            onFinish: () => setClientToDelete(null),
+        });
+    };
+
+    const handleRestore = (clientId: number) => {
+        router.post(`/clients/${clientId}/restore`);
     };
 
     const getMembershipStatusColor = (client: Client): 'secondary' | 'destructive' | 'warning' | 'success' => {
@@ -272,6 +297,7 @@ export default function ClientsIndex({ clients, filters, stats, documentTemplate
                                         <SelectItem value="all">Todos</SelectItem>
                                         <SelectItem value="active">Activo</SelectItem>
                                         <SelectItem value="inactive">Inactivo</SelectItem>
+                                        <SelectItem value="deleted">Eliminados ({stats.deleted})</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
@@ -344,9 +370,15 @@ export default function ClientsIndex({ clients, filters, stats, documentTemplate
                                         <div className="space-y-1">
                                             <div className="flex items-center space-x-2">
                                                 <h3 className="text-lg font-semibold">{client.name}</h3>
-                                                <Badge variant={client.status === 'active' ? 'default' : 'secondary'}>
-                                                    {client.status === 'active' ? 'Activo' : 'Inactivo'}
-                                                </Badge>
+                                                {client.deleted_at ? (
+                                                    <Badge variant="destructive">
+                                                        Eliminado el {new Date(client.deleted_at).toLocaleDateString('es-VE')}
+                                                    </Badge>
+                                                ) : (
+                                                    <Badge variant={client.status === 'active' ? 'default' : 'secondary'}>
+                                                        {client.status === 'active' ? 'Activo' : 'Inactivo'}
+                                                    </Badge>
+                                                )}
                                                 <Badge variant={getMembershipStatusColor(client)}>
                                                     {getMembershipStatusText(client)}
                                                 </Badge>
@@ -411,40 +443,53 @@ export default function ClientsIndex({ clients, filters, stats, documentTemplate
                                         </div>
                                     </div>
                                     <div className="flex items-center space-x-2">
-                                        <GenerateDocumentModal
-                                            clientId={client.id}
-                                            clientName={client.name}
-                                            templates={documentTemplates}
-                                            existingDocumentsCount={client.files_count}
-                                            trigger={
-                                                <Button variant="outline" size="sm">
-                                                    <FileText className="h-4 w-4" />
+                                        {showingDeleted ? (
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => handleRestore(client.id)}
+                                            >
+                                                <RotateCcw className="mr-2 h-4 w-4" />
+                                                Restaurar
+                                            </Button>
+                                        ) : (
+                                            <>
+                                                <GenerateDocumentModal
+                                                    clientId={client.id}
+                                                    clientName={client.name}
+                                                    templates={documentTemplates}
+                                                    existingDocumentsCount={client.files_count}
+                                                    trigger={
+                                                        <Button variant="outline" size="sm">
+                                                            <FileText className="h-4 w-4" />
+                                                        </Button>
+                                                    }
+                                                />
+                                                <Link href={`/clients/${client.id}/documents`}>
+                                                    <Button variant="outline" size="sm">
+                                                        <FileText className="h-4 w-4" />
+                                                        Ver Documentos
+                                                    </Button>
+                                                </Link>
+                                                <Link href={`/clients/${client.id}`}>
+                                                    <Button variant="outline" size="sm">
+                                                        <Eye className="h-4 w-4" />
+                                                    </Button>
+                                                </Link>
+                                                <Link href={`/clients/${client.id}/edit`}>
+                                                    <Button variant="outline" size="sm">
+                                                        <Edit className="h-4 w-4" />
+                                                    </Button>
+                                                </Link>
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => setClientToDelete(client)}
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
                                                 </Button>
-                                            }
-                                        />
-                                        <Link href={`/clients/${client.id}/documents`}>
-                                            <Button variant="outline" size="sm">
-                                                <FileText className="h-4 w-4" />
-                                                Ver Documentos
-                                            </Button>
-                                        </Link>
-                                        <Link href={`/clients/${client.id}`}>
-                                            <Button variant="outline" size="sm">
-                                                <Eye className="h-4 w-4" />
-                                            </Button>
-                                        </Link>
-                                        <Link href={`/clients/${client.id}/edit`}>
-                                            <Button variant="outline" size="sm">
-                                                <Edit className="h-4 w-4" />
-                                            </Button>
-                                        </Link>
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => handleDelete(client.id)}
-                                        >
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
+                                            </>
+                                        )}
                                     </div>
                                 </div>
                             </CardContent>
@@ -481,6 +526,36 @@ export default function ClientsIndex({ clients, filters, stats, documentTemplate
                 )}
                 </div>
             </div>
+
+            <Dialog open={clientToDelete !== null} onOpenChange={(open) => !open && setClientToDelete(null)}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Eliminar a {clientToDelete?.name}</DialogTitle>
+                        <DialogDescription asChild>
+                            <div className="space-y-2 text-left">
+                                <p>
+                                    El cliente se ocultará del listado, pero <strong>no se borra nada</strong>:
+                                    sus {clientToDelete?.memberships_count ?? 0} membresía(s),
+                                    sus pagos y sus {clientToDelete?.files_count ?? 0} documento(s) se conservan.
+                                </p>
+                                <p>
+                                    Puedes recuperarlo cuando quieras con el filtro «Eliminados», o al intentar
+                                    registrarlo de nuevo con la misma cédula.
+                                </p>
+                            </div>
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setClientToDelete(null)}>
+                            Cancelar
+                        </Button>
+                        <Button variant="destructive" onClick={confirmDelete}>
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Eliminar cliente
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </AppLayout>
     );
 }

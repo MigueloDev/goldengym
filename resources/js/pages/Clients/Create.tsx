@@ -24,6 +24,8 @@ import AppLayout from '@/layouts/app-layout';
 import { clientsBreadcrumbs } from '@/lib/breadcrumbs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import DateInput from '@/components/DateInput';
+import RestorableClientAlert, { type RestorableClient } from '@/components/clients/RestorableClientAlert';
+import { usePage } from '@inertiajs/react';
 
 interface Pathology {
   id: number;
@@ -98,6 +100,13 @@ export default function CreateClient({ pathologies }: Props) {
 
   const breadcrumbs = clientsBreadcrumbs.create();
 
+  // Si los datos chocan con un cliente eliminado, el backend devuelve sus datos
+  // para ofrecer la reactivación en lugar de crear un registro duplicado.
+  const { flash } = usePage().props as unknown as {
+    flash?: { restorable_client?: RestorableClient };
+  };
+  const restorableClient = flash?.restorable_client;
+
   return (
     <AppLayout breadcrumbs={breadcrumbs}>
       <Head title="Nuevo Cliente" />
@@ -120,6 +129,8 @@ export default function CreateClient({ pathologies }: Props) {
               </div>
             </div>
           </div>
+
+          {restorableClient && <RestorableClientAlert client={restorableClient} />}
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Información Personal */}

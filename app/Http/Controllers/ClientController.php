@@ -7,8 +7,11 @@ use App\Models\Pathology;
 use App\Models\DocumentTemplate;
 use App\Models\File;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
 class ClientController extends Controller
@@ -33,7 +36,9 @@ class ClientController extends Controller
             });
         }
 
-        if ($request->filled('status') && $request->status !== 'all') {
+        if ($request->status === 'deleted') {
+            $query->onlyTrashed();
+        } elseif ($request->filled('status') && $request->status !== 'all') {
             $query->where('status', $request->status);
         }
 
@@ -87,6 +92,7 @@ class ClientController extends Controller
                 'active' => Client::where('status', 'active')->count(),
                 'with_membership' => Client::whereHas('activeMembership')->count(),
                 'expiring_soon' => Client::withExpiringSoon()->count(),
+                'deleted' => Client::onlyTrashed()->count(),
             ],
             'documentTemplates' => DocumentTemplate::active()->get(),
             'documentStats' => [
@@ -123,11 +129,33 @@ class ClientController extends Controller
             'identification_number' => $request->identification_prefix . '-' . $request->identification_number
         ]);
 
+        // Un cliente eliminado ya no bloquea el correo ni la cédula: en ese caso
+        // se ofrece reactivarlo en lugar de crear un registro nuevo.
+        $trashed = Client::onlyTrashed()
+            ->matchingIdentity($request->email, $request->identification_number)
+            ->first();
+
+        if ($trashed) {
+            return back()->withInput()->with([
+                'flash_success' => false,
+                'flash_message' => "Ya existe un cliente eliminado con esos datos: {$trashed->name}. Puedes reactivarlo para recuperar su historial.",
+                'flash_restorable_client' => [
+                    'id' => $trashed->id,
+                    'name' => $trashed->name,
+                    'email' => $trashed->email,
+                    'identification_number' => $trashed->identification_number,
+                    'deleted_at' => $trashed->deleted_at?->toDateTimeString(),
+                    'summary' => $trashed->deletionSummary(),
+                    'from_membership' => (bool) $request->fromMembership,
+                ],
+            ]);
+        }
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|email|max:255|unique:clients,email',
+            'email' => ['required', 'email', 'max:255', Rule::unique('clients', 'email')->whereNull('deleted_at')],
             'phone' => 'nullable|string|max:20',
-            'identification_number' => 'required|string|max:20|unique:clients,identification_number',
+            'identification_number' => ['required', 'string', 'max:20', Rule::unique('clients', 'identification_number')->whereNull('deleted_at')],
             'identification_prefix' => 'nullable|in:V,E,J,G',
             'address' => 'nullable|string|max:500',
             'birth_date' => 'nullable|date|before:today',
@@ -140,21 +168,25 @@ class ClientController extends Controller
             'profile_photo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
 
-        $client = Client::create($validated);
+        $client = DB::transaction(function () use ($request, $validated) {
+            $client = Client::create($validated);
 
-        // Manejar foto de perfil si se proporcionó
-        if ($request->hasFile('profile_photo')) {
-            $this->handleProfilePhoto($request, $client);
-        }
-
-        // Asociar patologías si se proporcionaron
-        if (isset($validated['pathologies'])) {
-            foreach ($validated['pathologies'] as $pathology) {
-                $client->pathologies()->attach($pathology['id'], [
-                    'notes' => $pathology['notes'] ?? null
-                ]);
+            // Manejar foto de perfil si se proporcionó
+            if ($request->hasFile('profile_photo')) {
+                $this->handleProfilePhoto($request, $client);
             }
-        }
+
+            // Asociar patologías si se proporcionaron
+            if (isset($validated['pathologies'])) {
+                foreach ($validated['pathologies'] as $pathology) {
+                    $client->pathologies()->attach($pathology['id'], [
+                        'notes' => $pathology['notes'] ?? null
+                    ]);
+                }
+            }
+
+            return $client;
+        });
 
         // Si la petición viene del modal de membresía, devolver los datos del cliente
         if ($request->fromMembership) {
@@ -220,9 +252,9 @@ class ClientController extends Controller
         try {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'nullable|email|max:255|unique:clients,email,' . $client->id,
+            'email' => ['nullable', 'email', 'max:255', Rule::unique('clients', 'email')->whereNull('deleted_at')->ignore($client->id)],
             'phone' => 'nullable|string|max:20',
-            'identification_number' => 'nullable|string|max:20|unique:clients,identification_number,' . $client->id,
+            'identification_number' => ['nullable', 'string', 'max:20', Rule::unique('clients', 'identification_number')->whereNull('deleted_at')->ignore($client->id)],
             'identification_prefix' => 'nullable|in:V,E,J,G',
             'address' => 'nullable|string|max:500',
             'birth_date' => 'nullable|date|before:today',
@@ -258,6 +290,10 @@ class ClientController extends Controller
             ->with('flash_success', true)
             ->with('flash_message', 'Cliente actualizado exitosamente.');
 
+        } catch (ValidationException $e) {
+            // Los errores por campo deben llegar al formulario, no convertirse
+            // en un mensaje genérico.
+            throw $e;
         } catch (\Exception $e) {
             Log::error('Error al actualizar el cliente: ' . $e->getMessage());
             return back()->withErrors([
@@ -278,37 +314,57 @@ class ClientController extends Controller
                 ->with('flash_message', 'El cliente tiene una membresía activa y no puede ser eliminado.');
         }
 
-        $client->delete();
+        // Soft delete: membresías, pagos, archivos y patologías se conservan
+        // intactos para poder restaurar al cliente con todo su historial.
+        DB::transaction(function () use ($client) {
+            $client->update(['status' => 'inactive']);
+            $client->delete();
+        });
 
         return redirect()->route('clients.index')
             ->with('flash_success', true)
-            ->with('flash_message', 'Cliente eliminado exitosamente.');
+            ->with('flash_message', 'Cliente eliminado. Puedes restaurarlo desde el filtro "Eliminados".');
     }
 
     /**
      * Restore a soft deleted client.
      */
-    public function restore($id)
+    public function restore(Request $request, $id)
     {
-        $client = Client::withTrashed()->findOrFail($id);
-        $client->restore();
+        $client = Client::onlyTrashed()->findOrFail($id);
+
+        // Mientras estuvo eliminado alguien pudo registrar otro cliente con el
+        // mismo correo o cédula; restaurar en ese caso violaría el índice único.
+        $conflict = Client::matchingIdentity($client->email, $client->identification_number)->first();
+
+        if ($conflict) {
+            $field = $conflict->identification_number === $client->identification_number ? 'la cédula' : 'el correo';
+
+            return redirect()->route('clients.index')
+                ->with('flash_success', false)
+                ->with('flash_message', "No se puede restaurar: {$field} ya pertenece al cliente activo {$conflict->name}.");
+        }
+
+        DB::transaction(function () use ($client) {
+            $client->restore();
+            $client->update(['status' => 'active']);
+        });
+
+        if ($request->fromMembership) {
+            return back()->with([
+                'flash_client' => [
+                    'id' => $client->id,
+                    'name' => $client->name,
+                    'email' => $client->email,
+                ],
+                'flash_success' => true,
+                'flash_message' => 'Cliente reactivado exitosamente.',
+            ]);
+        }
 
         return redirect()->route('clients.index')
             ->with('flash_success', true)
-            ->with('flash_message', 'Cliente restaurado exitosamente.');
-    }
-
-    /**
-     * Force delete a client.
-     */
-    public function forceDelete($id)
-    {
-        $client = Client::withTrashed()->findOrFail($id);
-        $client->forceDelete();
-
-        return redirect()->route('clients.index')
-            ->with('flash_success', true)
-            ->with('flash_message', 'Cliente eliminado permanentemente.');
+            ->with('flash_message', 'Cliente restaurado exitosamente con todo su historial.');
     }
 
         /**

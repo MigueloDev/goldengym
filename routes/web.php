@@ -22,10 +22,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Rutas para clientes
     Route::get('clients/search', [ClientController::class, 'search'])->name('clients.search');
+    Route::post('clients/{id}/restore', [ClientController::class, 'restore'])->name('clients.restore');
     Route::resource('clients', ClientController::class);
     Route::post('clients/{client}', [ClientController::class, 'update'])->name('clients.update');
-    Route::post('clients/{id}/restore', [ClientController::class, 'restore'])->name('clients.restore');
-    Route::delete('clients/{id}/force-delete', [ClientController::class, 'forceDelete'])->name('clients.force-delete');
     Route::delete('clients/{client}/profile-photo', [ClientController::class, 'removeProfilePhoto'])->name('clients.remove-profile-photo');
 
     // Rutas para patologías

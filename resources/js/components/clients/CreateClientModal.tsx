@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import DateInput from '../DateInput';
+import RestorableClientAlert, { type RestorableClient } from './RestorableClientAlert';
 
 interface Pathology {
   id: number;
@@ -77,13 +78,29 @@ export default function CreateClientModal({
     notes: string;
   }>>([]);
 
+  const [restorableClient, setRestorableClient] = useState<RestorableClient | null>(null);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     post('/clients', {
       onSuccess: (response) => {
-        /* @ts-expect-error Inertia response type */
-        const newClient = response.props.flash?.client;
-        onClientCreated(newClient as { id: number; name: string; email: string });
+        const flash = (response.props.flash ?? {}) as {
+          client?: { id: number; name: string; email: string };
+          restorable_client?: RestorableClient;
+        };
+
+        // El cliente ya existe pero está eliminado: se ofrece reactivarlo en
+        // lugar de crearlo, y el modal permanece abierto.
+        if (flash.restorable_client) {
+          setRestorableClient(flash.restorable_client);
+          return;
+        }
+
+        if (!flash.client) {
+          return;
+        }
+
+        onClientCreated(flash.client);
         handleClose();
       },
       onError: (errors) => {
@@ -92,9 +109,15 @@ export default function CreateClientModal({
     });
   };
 
+  const handleRestored = (client: { id: number; name: string; email: string }) => {
+    onClientCreated(client);
+    handleClose();
+  };
+
   const handleClose = () => {
     reset();
     setSelectedPathologies([]);
+    setRestorableClient(null);
     onClose();
   };
 
@@ -139,6 +162,14 @@ export default function CreateClientModal({
             Completa la información del nuevo cliente. Los campos marcados con * son obligatorios.
           </DialogDescription>
         </DialogHeader>
+
+        {restorableClient && (
+          <RestorableClientAlert
+            client={restorableClient}
+            fromMembership={fromMembership}
+            onRestored={handleRestored}
+          />
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Información Personal */}

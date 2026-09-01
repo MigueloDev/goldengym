@@ -7,6 +7,8 @@ use App\Models\Pathology;
 use App\Models\DocumentTemplate;
 use App\Models\User;
 use App\Models\File;
+use App\Models\Membership;
+use App\Models\Payment;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -287,10 +289,7 @@ class ClientControllerTest extends TestCase
             'status' => 'active'
         ]);
 
-        // El controlador maneja errores de validación con try-catch
-        // y devuelve un error genérico, no errores específicos
-        $response->assertSessionHasErrors(['flash_message']);
-        $response->assertSessionHas('flash_success', false);
+        $response->assertSessionHasErrors(['email']);
     }
 
     /** @test */
@@ -317,15 +316,169 @@ class ClientControllerTest extends TestCase
     }
 
     /** @test */
-    public function it_can_force_delete_client()
+    public function it_no_longer_exposes_a_force_delete_route()
+    {
+        $this->assertFalse(
+            \Illuminate\Support\Facades\Route::has('clients.force-delete'),
+            'El borrado permanente de clientes no debe estar disponible.'
+        );
+    }
+
+    /** @test */
+    public function deleting_a_client_preserves_memberships_and_payments()
     {
         $client = Client::factory()->create();
-        $client->delete();
+        $membership = Membership::factory()->create([
+            'client_id' => $client->id,
+            'status' => 'expired',
+        ]);
+        $payment = Payment::create([
+            'membership_id' => $membership->id,
+            'payable_id' => $membership->id,
+            'payable_type' => Membership::class,
+            'amount' => 50,
+            'currency' => 'usd',
+            'payment_date' => now()->toDateString(),
+            'payment_method' => 'cash_usd',
+            'registered_by' => $this->user->id,
+        ]);
 
-        $response = $this->delete(route('clients.force-delete', $client->id));
+        $response = $this->delete(route('clients.destroy', $client));
 
         $response->assertRedirect(route('clients.index'));
-        $this->assertDatabaseMissing('clients', ['id' => $client->id]);
+        $this->assertSoftDeleted($client);
+        $this->assertDatabaseHas('memberships', ['id' => $membership->id]);
+        $this->assertDatabaseHas('payments', ['id' => $payment->id]);
+    }
+
+    /** @test */
+    public function it_marks_a_deleted_client_as_inactive()
+    {
+        $client = Client::factory()->create(['status' => 'active']);
+
+        $this->delete(route('clients.destroy', $client));
+
+        $this->assertEquals('inactive', $client->fresh()->status);
+    }
+
+    /** @test */
+    public function it_cannot_delete_a_client_with_an_active_membership()
+    {
+        $client = Client::factory()->create();
+        Membership::factory()->create([
+            'client_id' => $client->id,
+            'status' => 'active',
+        ]);
+
+        $response = $this->delete(route('clients.destroy', $client));
+
+        $response->assertSessionHas('flash_success', false);
+        $this->assertNotSoftDeleted($client);
+    }
+
+    /** @test */
+    public function it_can_list_deleted_clients()
+    {
+        $active = Client::factory()->create();
+        $deleted = Client::factory()->create();
+        $deleted->delete();
+
+        $response = $this->get(route('clients.index', ['status' => 'deleted']));
+
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('Clients/Index')
+            ->has('clients.data', 1)
+            ->where('clients.data.0.id', $deleted->id)
+            ->where('stats.deleted', 1)
+        );
+    }
+
+    /** @test */
+    public function it_offers_to_restore_when_storing_a_client_that_matches_a_deleted_one()
+    {
+        $deleted = Client::factory()->create([
+            'email' => 'juan@example.com',
+            'identification_number' => 'V-12345678',
+        ]);
+        $deleted->delete();
+
+        $response = $this->post(route('clients.store'), [
+            'name' => 'Juan Pérez',
+            'email' => 'juan@example.com',
+            'phone_prefix' => '0412',
+            'phone_number' => '1234567',
+            'identification_prefix' => 'V',
+            'identification_number' => '12345678',
+            'status' => 'active',
+        ]);
+
+        $response->assertSessionHas('flash_success', false);
+        $response->assertSessionHas('flash_restorable_client.id', $deleted->id);
+
+        // No se crea un registro duplicado
+        $this->assertEquals(0, Client::where('email', 'juan@example.com')->count());
+    }
+
+    /** @test */
+    public function restoring_a_client_brings_back_its_history_and_reactivates_it()
+    {
+        $client = Client::factory()->create(['status' => 'active']);
+        $membership = Membership::factory()->create([
+            'client_id' => $client->id,
+            'status' => 'expired',
+        ]);
+        $this->delete(route('clients.destroy', $client));
+
+        $response = $this->post(route('clients.restore', $client->id));
+
+        $response->assertRedirect(route('clients.index'));
+        $client->refresh();
+        $this->assertNull($client->deleted_at);
+        $this->assertEquals('active', $client->status);
+        $this->assertTrue($client->memberships()->whereKey($membership->id)->exists());
+    }
+
+    /** @test */
+    public function it_cannot_restore_a_client_whose_identity_was_taken()
+    {
+        $deleted = Client::factory()->create(['identification_number' => 'V-12345678']);
+        $deleted->delete();
+
+        Client::factory()->create([
+            'identification_number' => 'V-12345678',
+            'name' => 'Cliente Nuevo',
+        ]);
+
+        $response = $this->post(route('clients.restore', $deleted->id));
+
+        $response->assertSessionHas('flash_success', false);
+        $this->assertSoftDeleted($deleted);
+    }
+
+    /** @test */
+    public function a_deleted_client_does_not_block_reusing_its_email_or_identification()
+    {
+        $deleted = Client::factory()->create([
+            'email' => 'juan@example.com',
+            'identification_number' => 'V-12345678',
+        ]);
+        $deleted->delete();
+
+        // Datos distintos al eliminado, así que no se ofrece reactivación:
+        // la validación de unicidad tampoco debe dispararse.
+        $response = $this->post(route('clients.store'), [
+            'name' => 'Otro Cliente',
+            'email' => 'otro@example.com',
+            'phone_prefix' => '0412',
+            'phone_number' => '1234567',
+            'identification_prefix' => 'V',
+            'identification_number' => '99999999',
+            'status' => 'active',
+        ]);
+
+        $response->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('clients', ['email' => 'otro@example.com']);
     }
 
     /** @test */
